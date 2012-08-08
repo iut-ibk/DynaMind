@@ -153,6 +153,8 @@ void Module::setInternalCounter(int counter)
     this->internalCounter = counter;
 }
 
+
+
 void Module::updateParameter() {
     Logger(Debug) << this->getUuid() <<" Update Parameter";
     for (std::map<std::string,int>::const_iterator it = parameter.begin(); it != parameter.end(); ++it) {
@@ -722,5 +724,29 @@ void Module::setExecuted(bool ex){
     }
 }
 
+void Module::setSuccessors(std::vector<std::string> list)
+{
+    successors=list;
+}
+
+std::vector<std::string> Module::getSuccessors()
+{
+    return successors;
+}
+
+bool Module::isSuccessor(std::string successor)
+{
+    bool retVal=false;
+    for (int i=0;i<successors.size();i++)
+    {
+        if (successors[i]==successor)
+        {
+            retVal=true;
+            break;
+        }
+    }
+    return retVal;
+}
 
 }
+

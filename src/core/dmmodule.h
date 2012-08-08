@@ -408,6 +408,10 @@ public:
 
     void setInternalCounter(int counter);
 
+    void setSuccessors(std::vector<std::string> list);
+    std::vector<std::string> getSuccessors();
+    bool isSuccessor(std::string successor);
+
 private:
     bool PythonModule;
     long id;
@@ -423,7 +427,7 @@ private:
     std::map<std::string, DM::System *> ownedSystems_prev;
     bool hasBeenExecuted;
 
-
+    std::vector<std::string> successors;
 
 protected:
     std::map<std::string, int> int_params;
