@@ -41,10 +41,10 @@ Component::Component()
 {
     this->uuid = QUuid::createUuid().toString().toStdString();
     name = "";
-    childsview = std::map<std::string,Component*>();
-    attributesview = std::map<std::string,Attribute*>();
-    ownedchilds = std::map<std::string,Component*>();
-    ownedattributes =  std::map<std::string,Attribute*>();
+    childsview = std::vector<Component*>();
+    attributesview = std::vector<Attribute*>();
+    ownedchilds = std::vector<Component*>();
+    ownedattributes =  std::vector<Attribute*>();
     inViews = std::set<std::string>();
     currentSys = 0;
 }
@@ -66,9 +66,6 @@ void Component::setName(std::string name) {
     this->name = name;
 }
 
-//std::string Component::getName() const {
-//return name;
-//}
 
 Component::Component(const Component& c)
 {
@@ -77,21 +74,18 @@ Component::Component(const Component& c)
     ownedchilds=c.ownedchilds;
     inViews = c.inViews;
 
-    std::map<std::string,Component*>::iterator it;
 
-    for ( it=ownedchilds.begin() ; it != ownedchilds.end(); it++ )
-    {
+    foreach (Component * c, ownedchilds)
+        childsview.push_back(c);
 
-        childsview[(*it).first]=ownedchilds[(*it).first];
-    }
     ownedchilds.clear();
 
 }
 Component * Component::updateChild(Component * c) {
-    if (ownedchilds.find(c->getUUID()) != ownedchilds.end())
+    if (this->findComponent(c->getUUID(),ownedchilds) == c)
         return c;
     Component * c_new = c->clone();
-    ownedchilds[c->getUUID()]=c_new;
+    ownedchilds.push_back(c_new);
 
     return c_new;
 }
@@ -100,13 +94,13 @@ Component::~Component()
 {
     while(ownedchilds.size())
     {
-        delete (*ownedchilds.begin()).second;
+        delete *ownedchilds.begin();
         ownedchilds.erase(ownedchilds.begin());
     }
 
     while(ownedattributes.size())
     {
-        delete (*ownedattributes.begin()).second;
+        delete *ownedattributes.begin();
         ownedattributes.erase(ownedattributes.begin());
     }
 }
@@ -122,7 +116,8 @@ std::string Component::getUUID()
 }
 
 bool Component::addAttribute(std::string name, double val) {
-    if(attributesview.find(name)!=attributesview.end()) {
+
+    if(this->findAttribute(name, attributesview)) {
         return this->changeAttribute(name, val);
     }
     Attribute  attr = Attribute(name, val);
@@ -132,11 +127,11 @@ bool Component::addAttribute(std::string name, double val) {
 
 bool Component::addAttribute(Attribute newattribute)
 {
-    if(attributesview.find(newattribute.getName())!=attributesview.end())
+    if(this->findAttribute(name, attributesview))
         return false;
     Attribute * a = new Attribute(newattribute);
-    attributesview[newattribute.getName()] = a;
-    ownedattributes[newattribute.getName()] = a;
+    attributesview.push_back(a);
+    ownedattributes.push_back(a);
 
     return true;
 }
@@ -144,14 +139,18 @@ bool Component::addAttribute(Attribute newattribute)
 bool Component::changeAttribute(Attribute newattribute)
 {
 
-    if(attributesview.find(newattribute.getName())==attributesview.end()) {
+    Attribute * aInView = this->findAttribute(newattribute.getName(), attributesview) ;
+    if(aInView == 0) {
         return this->addAttribute(newattribute);
     }
-    if(ownedattributes.find(newattribute.getName())==ownedattributes.end()) {
-        ownedattributes[newattribute.getName()] = new Attribute(*(attributesview[newattribute.getName()]));
-        attributesview[newattribute.getName()] = ownedattributes[newattribute.getName()];
+
+    if(this->findAttribute(newattribute.getName(), ownedattributes)  == 0){
+        Attribute * a = new Attribute(*(this->findAttribute(newattribute.getName(), ownedattributes)));
+        ownedattributes.push_back(a);
+        int pos = std::find(attributesview.begin(), attributesview.end(), aInView) - attributesview.begin();
+        attributesview[pos] = a;
     }
-    Attribute * attr = attributesview[newattribute.getName()];
+    Attribute * attr =this->findAttribute(newattribute.getName(), attributesview);
     Attribute::AttributeType type = attr->getType();
     attr->setDouble(newattribute.getDouble());
     attr->setDoubleVector(newattribute.getDoubleVector());
@@ -169,15 +168,17 @@ bool Component::changeAttribute(std::string s, double val)
 
 bool Component::removeAttribute(std::string name)
 {
-    if(attributesview.find(name)!=attributesview.end())
+    if(this->findAttribute(name, attributesview))
     {
-        if(ownedattributes.find(name)!=ownedattributes.end())
+        Attribute * attr =this->findAttribute(name, attributesview);
+        if(this->findAttribute(name, ownedattributes))
         {
-            delete ownedattributes[name];
-            ownedattributes.erase(name);
+
+            delete attr;
+            ownedattributes.erase(std::find(ownedattributes.begin(), ownedattributes.end(), attr));
         }
 
-        attributesview.erase(name);
+        attributesview.erase(std::find(ownedattributes.begin(), ownedattributes.end(), attr));
         return true;
     }
 
@@ -186,15 +187,21 @@ bool Component::removeAttribute(std::string name)
 
 Attribute* Component::getAttribute(std::string name)
 {
-    if(attributesview.find(name)==attributesview.end()) {
+    DM::Attribute * attr = this->findAttribute(name, attributesview);
+    if(!attr) {
         this->addAttribute(Attribute(name));
     }
-    return attributesview[name];
+    return attr;
 }
 
-const std::map<std::string, Attribute*> & Component::getAllAttributes() const
+const std::map<std::string, Attribute*>  Component::getAllAttributes() const
 {
-    return attributesview;
+
+    std::map<std::string, Attribute*>  ressMap;
+    foreach(Attribute * attr, attributesview) {
+        ressMap[attr->getName()] = attr;
+    }
+    return ressMap;
 }
 
 bool Component::addChild(Component *newcomponent)
@@ -202,15 +209,16 @@ bool Component::addChild(Component *newcomponent)
     if(!newcomponent)
         return false;
 
-    if(childsview.find(newcomponent->getUUID())!=childsview.end())
+    if(this->findComponent(newcomponent->getUUID(),childsview))
         return false;
 
-    childsview[newcomponent->getUUID()] = newcomponent;
-    ownedchilds[newcomponent->getUUID()] = newcomponent;
+    childsview.push_back(newcomponent);
+    ownedchilds.push_back(newcomponent);
 
 
     return true;
 }
+
 Component* Component::clone() {
     return new Component(*this);
 }
@@ -220,26 +228,40 @@ bool Component::changeChild(Component *newcomponent)
     if(!newcomponent)
         return false;
 
-    if(ownedchilds.find(newcomponent->getUUID())!=ownedchilds.end())
-        delete ownedchilds[newcomponent->getUUID()];
+    if(this->findComponent(newcomponent->getUUID(), ownedchilds)){
+        Component * cmp = this->findComponent(newcomponent->getUUID(), ownedchilds);
+        int pos = std::find(ownedchilds.begin(), ownedchilds.end(), cmp) - ownedchilds.begin();
+        ownedchilds[pos] = newcomponent;
 
-    ownedchilds[newcomponent->getUUID()] = newcomponent;
-    childsview[newcomponent->getUUID()] = newcomponent;
+    } else {
+        ownedchilds.push_back(newcomponent);
+    }
 
+    if(this->findComponent(newcomponent->getUUID(), childsview)){
+        Component * cmp = this->findComponent(newcomponent->getUUID(), childsview);
+        int pos = std::find(childsview.begin(), childsview.end(), cmp) - childsview.begin();
+        childsview[pos] = newcomponent;
+
+    } else {
+        childsview.push_back(newcomponent);
+    }
     return true;
 }
 
+
+
 bool Component::removeChild(std::string name)
 {
-    if(childsview.find(name)!=childsview.end())
+    if(this->findComponent(name, childsview))
     {
-        if(ownedchilds.find(name)!=ownedchilds.end())
+        Component * attr =this->findComponent(name, childsview);
+        if(this->findComponent(name, ownedchilds))
         {
-            delete ownedchilds[name];
-            ownedchilds.erase(name);
-        }
 
-        childsview.erase(name);
+            delete attr;
+            ownedchilds.erase(std::find(ownedchilds.begin(), ownedchilds.end(), attr));
+        }
+        childsview.erase(std::find(childsview.begin(), childsview.end(), attr));
         return true;
     }
 
@@ -248,9 +270,7 @@ bool Component::removeChild(std::string name)
 
 Component* Component::getChild(std::string name)
 {
-    if(childsview.find(name)==childsview.end())
-        return 0;
-    return childsview[name];
+    return this->findComponent(name, childsview);
 }
 
 void Component::setView(std::string view)
@@ -268,13 +288,36 @@ void Component::removeView(const View &view)
     this->inViews.erase(view.getName());
 }
 
+Component *Component::findComponent(string uuid, std::vector<Component*> & vec)
+{
+    foreach (Component * c, vec) {
+        if(c->getUUID().compare(uuid) == 0)
+            return c;
+    }
+    return 0;
+}
+
+Attribute *Component::findAttribute(string name, std::vector<Attribute*> & vec)
+{
+    foreach (Attribute * c, vec) {
+        if(c->getName().compare(name) == 0)
+            return c;
+    }
+    return 0;
+}
+
 const set<std::string> &Component::getInViews() const {
     return this->inViews;
 
 }
 std::map<std::string, Component*> Component::getAllChilds()
 {
-    return childsview;
+
+    std::map<std::string, Component*>  ressMap;
+    foreach(Component * attr, childsview) {
+        ressMap[attr->getUUID()] = attr;
+    }
+    return ressMap;
 }
 
 System * Component::getCurrentSystem() {

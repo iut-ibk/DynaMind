@@ -57,14 +57,17 @@ class DM_HELPER_DLL_EXPORT Component
 protected:
     std::string uuid;
     std::string name;
-    std::map<std::string,Component*> childsview;
-    std::map<std::string,Attribute*> attributesview;
-    std::map<std::string,Component*> ownedchilds;
-    std::map<std::string,Attribute*> ownedattributes;
+    std::vector<Component*> childsview;
+    std::vector<Attribute*> attributesview;
+    std::vector<Component*> ownedchilds;
+    std::vector<Attribute*> ownedattributes;
     std::set<std::string> inViews;
     System * currentSys;
 
     void removeView(const DM::View & view);
+
+    Component *findComponent(std::string uuid, std::vector<Component*> & vec);
+    Attribute *findAttribute(std::string name, std::vector<Attribute*> & vec);
 
 
 public:
@@ -106,7 +109,7 @@ public:
     Attribute* getAttribute(std::string name);
 
     /** @brief Returns a map of all Attributes */
-    const std::map<std::string, Attribute*> & getAllAttributes() const;
+    const std::map<std::string, Attribute*>  getAllAttributes() const;
 
 
     /** @brief adds Component to a View by using the name of the view */
@@ -150,5 +153,8 @@ public:
 
 };
 typedef std::map<std::string, DM::Component*> ComponentMap;
+
+
 }
+
 #endif // COMPONENT_H
