@@ -61,9 +61,11 @@ Module::~Module()
 		delete observer;
 	observers.clear();
 }
-void Module::addParameter(const std::string &name, DataTypes type, void * ref, std::string description) 
+void Module::addParameter(const std::string &name, int type, void * ref, std::string description)
 {
-	Parameter *p = new Parameter(name, type, description);
+    //Parameter *p = new Parameter(name, type, description);
+    //FIX Python Interface
+    Parameter *p = new Parameter(name, (DataTypes) type, description);
 	p->data = ref;
 	parameters.push_back(p);
 }
