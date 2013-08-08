@@ -129,7 +129,9 @@ public:
       * - DM::STRING_LIST
       * - DM::STRING_MAP
       */
-    void addParameter(const std::string &name, const DataTypes type, void * ref, const std::string description = "");
+    // FIX for Python Interface
+    void addParameter(const std::string &name, const int type, void * ref, const std::string description = "");
+    //void addParameter(const std::string &name, const DataTypes type, void * ref, const std::string description = "");
 
 	ModuleStatus getStatus(){return status;};
 	

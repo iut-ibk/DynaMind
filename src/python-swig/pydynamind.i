@@ -111,8 +111,9 @@ public:
     virtual std::string getParameterAsString(std::string Name);
     virtual void updateParameter();
 
-
-    void addParameter(const std::string &name, const DataTypes type, void * ref, const std::string description = "");
+    //FIX Python Interface
+    void addParameter(const std::string &name, const int type, void * ref, const std::string description = "");
+    //void addParameter(const std::string &name, const DataTypes type, void * ref, const std::string description = "");
     virtual void setParameterValue(std::string name, std::string value);
 
 	protected:
