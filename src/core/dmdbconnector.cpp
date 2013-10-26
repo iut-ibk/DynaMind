@@ -70,18 +70,27 @@ static QMutex* syncMutex = NULL;
 Asynchron::Asynchron()
 {
 	if(!syncMutex) syncMutex = new QMutex();
-	syncMutex->lockInline();
+#if QT_VERSION < 0x050000
+		this->mutex->lockInline();
+#endif
 	if(!syncList)	syncList = new std::set<Asynchron*>();
 
 	syncList->insert(this);
+#if QT_VERSION < 0x050000
 	syncMutex->unlockInline();
+#endif
+
 }
 Asynchron::~Asynchron()
 {
-	syncMutex->lockInline();
+#if QT_VERSION < 0x050000
+		this->mutex->lockInline();
+#endif
 	if(syncList)
 		syncList->erase(this);
+#if QT_VERSION < 0x050000
 	syncMutex->unlockInline();
+#endif
 }
 
 DBConnector* DBConnector::instance = 0;
@@ -362,25 +371,42 @@ void DBWorker::addQuery(QSqlQuery *q)
 
 bool DBWorker::ExecuteSelect(QSqlQuery *q)
 {
+#if QT_VERSION < 0x050000
 	clientSelectMutex.lock();
 	selectMutex.lockInline();
+#endif
 	qSelect = q;
 	selectStatus = SELECT_NOTDONE;
+#if QT_VERSION < 0x050000
 	selectMutex.unlockInline();
+#endif
+
 
 	// wait for finish
+#if QT_VERSION < 0x050000
 	while(selectStatus == SELECT_NOTDONE)
 		usleep(EXE_THREAD_SLEEP_TIME);
-
+#else
+	while(selectStatus.loadAcquire() == SELECT_NOTDONE)
+		usleep(EXE_THREAD_SLEEP_TIME);
+#endif
+#if QT_VERSION < 0x050000
 	clientSelectMutex.unlock();
+#endif
+#if QT_VERSION < 0x050000
 	return selectStatus>0;
+#else
+	return selectStatus.loadAcquire()>0;
+#endif
 }
 
 QSqlQuery* DBWorker::getQuery(QString cmd)
 {
 	QueryList* ql = NULL;
 	// search for query list
+#if QT_VERSION < 0x050000
 	queryMutex.lockInline();
+#endif
 	foreach(QueryList* it, queryLists)
 	{
 		if(it->cmd == cmd)
@@ -400,7 +426,11 @@ QSqlQuery* DBWorker::getQuery(QString cmd)
 	QSqlQuery *q = NULL;
 	while(!(q = ql->queryStack.pop()))
 		usleep(EXE_THREAD_SLEEP_TIME);
+
+
+#if QT_VERSION < 0x050000
 	queryMutex.unlockInline();
+#endif
 	return q;
 }
 

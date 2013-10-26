@@ -86,8 +86,15 @@ public:
 	~FIFOQueue(){}
 	T* pop()
 	{
+
+
+#if QT_VERSION < 0x050000
 		if(isEmpty)
+#else
+		if(isEmpty.loadAcquire())
+#endif
 			return NULL;
+
 
 		m.lock();
 		Node* n = root;
@@ -110,7 +117,11 @@ public:
 	void push(T* data)
 	{
 		m.lock();
+#if QT_VERSION < 0x050000
 		if(isEmpty)
+#else
+		if(isEmpty.loadAcquire())
+#endif
 			root = last = new Node(data);
 		else
 		{
@@ -123,11 +134,19 @@ public:
 	}
 	inline bool IsEmpty()
 	{
+#if QT_VERSION < 0x050000
 		return isEmpty;
+#else
+		return isEmpty.loadAcquire();
+#endif
 	}
 	inline bool IsMaxOneLeft()
 	{
+#if QT_VERSION < 0x050000
 		return maxOneLeft;
+#else
+		return maxOneLeft.loadAcquire();
+#endif
 	}
 };
 

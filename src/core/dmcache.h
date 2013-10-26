@@ -143,10 +143,14 @@ public:
 	unsigned long misses;
 	void ResetProfilingCounters()
 	{
+#if QT_VERSION < 0x050000
 		mutex->lockInline();
+#endif
 		misses = 0;
 		hits = 0;
+#if QT_VERSION < 0x050000
 		mutex->unlockInline();
+#endif
 	}
 #endif
 	//!< initializes a new cache structure with the given maximum size; a size of 0 results in an infinite cache
@@ -171,7 +175,9 @@ public:
 	//!< deletes all nodes, leaves the values untouched (non-deep delete)
 	virtual void Clear()
 	{
+#if QT_VERSION < 0x050000
 		mutex->lockInline();
+#endif
 		Node* cur;
 		Node* next;
 		next = _root;
@@ -185,14 +191,18 @@ public:
 		_root = NULL;
 		_last = NULL;
 		_cnt = 0;
+#if QT_VERSION < 0x050000
 		mutex->unlockInline();
+#endif
 	}
 	//!< returns the current element count
 	unsigned long getSize(){return _size;};
 	//!< returns the value associated with the given key 
 	virtual Tvalue* get(const Tkey& key)
 	{
+#if QT_VERSION < 0x050000
 		mutex->lockInline();
+#endif
 		Node *n = search(key);
 		// push front
 		if(n!=NULL)
@@ -203,23 +213,31 @@ public:
 			hits++;
 #endif
 
-			mutex->unlockInline();
+#if QT_VERSION < 0x050000
+		mutex->unlockInline();
+#endif
 			return n->value;
 		}
 #ifdef CACHE_PROFILING
 		misses++;
 #endif
+#if QT_VERSION < 0x050000
 		mutex->unlockInline();
+#endif
 		return NULL;
 	}
 	//!< adds a new key-value pair, does nothing if key exists. 
 	// If the maximum size is reached, it will remove the last key
 	virtual void add(const Tkey& key,Tvalue* value)
 	{
+#if QT_VERSION < 0x050000
 		mutex->lockInline();
+#endif
 		if(search(key) != NULL)
 		{
+#if QT_VERSION < 0x050000
 			mutex->unlockInline();
+#endif
 			return;
 		}
 
@@ -230,31 +248,43 @@ public:
 			if(_cnt>_size)
 				removeNode(_last);
 
+#if QT_VERSION < 0x050000
 		mutex->unlockInline();
+#endif
 	}
 	//!< replaces the value associated with the given key, returns false if key was not existant
 	virtual bool replace(const Tkey& key,Tvalue* value)
 	{
+#if QT_VERSION < 0x050000
 		mutex->lockInline();
+#endif
 		Node *n = search(key);
 		if(n==NULL)
 		{
+#if QT_VERSION < 0x050000
 			mutex->unlockInline();
+#endif
 			return false;
 		}
 
 		removeNode(n);
 		add(key, value);
+#if QT_VERSION < 0x050000
 		mutex->unlockInline();
+#endif
 		return true;
 	}
 	//!< removes the element from cache
 	void remove(const Tkey& key)
 	{
+#if QT_VERSION < 0x050000
 		mutex->lockInline();
+#endif
 		Node *n = search(key);
 		if(n)	removeNode(n);
-		mutex->unlockInline();
+#if QT_VERSION < 0x050000
+			mutex->unlockInline();
+#endif
 	}
 };
 }   // namespace DM

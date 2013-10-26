@@ -43,10 +43,15 @@ public:
 	//!< add a new key-value pair, calls SaveToDb if last element is dropped
 	void add(Tkey key,Tvalue* value)
 	{
+#if QT_VERSION < 0x050000
 		this->mutex->lockInline();
+#endif
 		if(Cache<Tkey,Tvalue>::search(key)!=NULL)
 		{
-			this->mutex->unlockInline();
+	#if QT_VERSION < 0x050000
+		this->mutex->unlockInline();
+	#endif
+
 			return;
 		}
 
@@ -65,19 +70,25 @@ public:
 				}
 			}
 		}
-		this->mutex->unlockInline();
+#if QT_VERSION < 0x050000
+		mutex->unlockInline();
+#endif
 	}
 	//!< returns the value associated with the given key, if not found LoadFromDb is called. Neither found in db, returns NULL
 	Tvalue* get(const Tkey& key)
 	{
+#if QT_VERSION < 0x050000
 		this->mutex->lockInline();
+#endif
 		Tvalue* v = Cache<Tkey,Tvalue>::get(key);
 		if(!v)
 		{
 			v = key->LoadFromDb();
 			if(v)   add(key,v);
 		}
-		this->mutex->unlockInline();
+#if QT_VERSION < 0x050000
+		mutex->unlockInline();
+#endif
 		return v;
 	}
 	// NOTE: currently removing from db is handled by the main class
@@ -86,7 +97,9 @@ public:
 	//<! resizes the cache, if the given value is 0, the cache is set to infinite
 	void resize(unsigned long size)
 	{
+#if QT_VERSION < 0x050000
 		this->mutex->lockInline();
+#endif
 		Cache<Tkey,Tvalue>::_size = size;
 
 		if(Cache<Tkey,Tvalue>::_size)
@@ -97,12 +110,16 @@ public:
 				Cache<Tkey,Tvalue>::removeNode(Cache<Tkey,Tvalue>::_last);
 			}
 		}
-		this->mutex->unlockInline();
+#if QT_VERSION < 0x050000
+		mutex->unlockInline();
+#endif
 	}
 
 	void preCache(const QList<Tkey>& keys)
 	{
+#if QT_VERSION < 0x050000
 		this->mutex->lockInline();
+#endif
 
 		if(keys.size() > 0)
 		{
@@ -118,7 +135,9 @@ public:
 				if(values[i] != NULL)
 					add(keys[i], values[i]);
 		}
+#if QT_VERSION < 0x050000
 		this->mutex->unlockInline();
+#endif
 	}
 	//!< deletes all nodes, leaves the values untouched (non-deep delete)
 	void Clear()

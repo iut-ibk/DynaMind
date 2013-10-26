@@ -121,7 +121,9 @@ Component::Component(const Component& c, bool bInherited)
 
 Component::~Component()
 {
-	mutex->lockInline();
+#if QT_VERSION < 0x050000
+		this->mutex->lockInline();
+#endif
 	mforeach(Attribute* a, ownedattributes)
 		if(a->GetOwner() == this)
 			delete a;
@@ -131,7 +133,9 @@ Component::~Component()
 		componentSyncMap.erase(this);
 	// if this class is not of type component, nothing will happen
 	SQLDelete();
-	mutex->unlockInline();
+#if QT_VERSION < 0x050000
+		mutex->unlockInline();
+#endif
 	delete mutex;
 }
 
