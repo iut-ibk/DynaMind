@@ -19,7 +19,7 @@ IF(${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
 ENDIF()
 
 IF( WITH_QT5)
-    qt5_use_modules(dynamindtoolbox Core Widgets  )
+    qt5_use_modules(dynamindtoolbox Core Widgets GUI )
 ENDIF()
 
 TARGET_LINK_LIBRARIES(dynamindtoolbox dynamindcore ${QT_LIBRARIES})

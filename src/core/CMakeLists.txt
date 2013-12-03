@@ -11,10 +11,6 @@ ELSE()
     FIND_PACKAGE( Qt5 COMPONENTS Widgets Core Sql Xml Concurrent Gui )
 ENDIF()
 
-
-
-
-
 FILE(GLOB DYNAMIND_CPPS *.cpp)
 FILE(GLOB DYNAMIND_HEADER *.h)
 
