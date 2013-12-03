@@ -71,7 +71,7 @@ public:
 			}
 		}
 #if QT_VERSION < 0x050000
-		mutex->unlockInline();
+		this->mutex->unlockInline();
 #endif
 	}
 	//!< returns the value associated with the given key, if not found LoadFromDb is called. Neither found in db, returns NULL
@@ -87,7 +87,7 @@ public:
 			if(v)   add(key,v);
 		}
 #if QT_VERSION < 0x050000
-		mutex->unlockInline();
+		this->mutex->unlockInline();
 #endif
 		return v;
 	}
@@ -111,7 +111,7 @@ public:
 			}
 		}
 #if QT_VERSION < 0x050000
-		mutex->unlockInline();
+		this->mutex->unlockInline();
 #endif
 	}
 

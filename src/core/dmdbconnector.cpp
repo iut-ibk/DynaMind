@@ -71,7 +71,7 @@ Asynchron::Asynchron()
 {
 	if(!syncMutex) syncMutex = new QMutex();
 #if QT_VERSION < 0x050000
-		this->mutex->lockInline();
+		syncMutex->lockInline();
 #endif
 	if(!syncList)	syncList = new std::set<Asynchron*>();
 
@@ -84,7 +84,7 @@ Asynchron::Asynchron()
 Asynchron::~Asynchron()
 {
 #if QT_VERSION < 0x050000
-		this->mutex->lockInline();
+		syncMutex->lockInline();
 #endif
 	if(syncList)
 		syncList->erase(this);
