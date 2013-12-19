@@ -25,6 +25,7 @@
  */
 #include "dmrootgroup.h"
 #include <QThreadPool>
+#include "dmsimulation.h"
 namespace DM {
 QThreadPool * DMRootGroup::pool = NULL;
 

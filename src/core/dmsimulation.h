@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <QThread>
+#include <QMessageBox>
 #include <dmrootgroup.h>
 
 
@@ -53,6 +54,8 @@ enum SimuatlonsStatuses {
     SIM_ERROR_SYSTEM_NOT_SET
 
 };
+
+
 
 /**
     * @class DM::Simulation
@@ -225,6 +228,10 @@ public:
     /**@brief returns List of successfully loaded module files*/
     std::vector<std::string> getLoadModuleFiles();
 
+    bool getRunning();
+    void setRunning(bool run);
+
+
 private:
     DMRootGroup * rootGroup;
     std::map<std::string, Module*> Modules;
@@ -235,8 +242,8 @@ private:
     void removeLinksFromModule(Module *);
     std::vector<std::string> loadedModuleFiles;
     bool virtualRun;
-
-
+    bool running;
+    QMessageBox *runningBox;
 
 };
 }

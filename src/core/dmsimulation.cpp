@@ -25,6 +25,7 @@
  */
 #include <QString>
 #include <QFileInfo>
+#include <QMessageBox>
 
 #include <iostream>
 #include <map>
@@ -245,7 +246,7 @@ Simulation::Simulation() {
     this->rootGroup->setSimulation(this);
     //this->Modules[rootGroup.getUuid()] = &this->rootGroup;
     this->moduleRegistry = new ModuleRegistry();
-
+    running=false;
 }
 
 bool Simulation::registerNativeModules(string Filename) {
@@ -332,6 +333,14 @@ void Simulation::run() {
 bool Simulation::startSimulation(bool virtualRun) {
 
     if (!virtualRun)
+    {
+        running=true;
+        //runningBox=new QMessageBox;
+        //runningBox->setWindowTitle("Calculating");
+        //runningBox->setText("Please wait.");
+        //runningBox->show();
+    }
+    if (!virtualRun)
         this->startSimulation(true);
     this->data->simulationStatus = SIM_OK;
     this->virtualRun = virtualRun;
@@ -345,6 +354,8 @@ bool Simulation::startSimulation(bool virtualRun) {
 
     if (!virtualRun) {
         Logger(Standard) << "End Simulation";
+        running=false;
+        //delete runningBox;
         return true;
     }
 
@@ -639,6 +650,16 @@ void Simulation::setSimulationStatus(int Status) {
 std::vector<std::string> Simulation::getLoadModuleFiles()
 {
     return this->loadedModuleFiles;
+}
+
+bool Simulation::getRunning()
+{
+    return running;
+}
+
+void Simulation::setRunning(bool run)
+{
+    running=run;
 }
 
 std::vector<Module*> Simulation::getModules() const{
