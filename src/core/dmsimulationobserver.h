@@ -35,6 +35,7 @@ public:
     SimulationObserver();
     virtual void SimulationCounter() = 0;
     virtual void VirtualRunDone() = 0;
+    virtual void SimulationStatusChanged() = 0;
 
 };
 }

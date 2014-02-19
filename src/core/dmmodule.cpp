@@ -87,6 +87,7 @@ Module::Module() {
     hasBeenExecuted = false;
     debugMode = false;
     _isFullyLinked = false;
+    this->status = 0;
 }
 
 Module::~Module() {
@@ -768,6 +769,16 @@ void Module::setExecuted(bool ex){
 
 std::string Module::getHelpUrl() {
     return "";
+}
+
+void Module::setStatus(int s)
+{
+    this->status = s;
+}
+
+int Module::getStatus()
+{
+    return this->status;
 }
 
 void Module::setDebugMode(bool mode) {

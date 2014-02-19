@@ -33,6 +33,7 @@
 #include <QThread>
 #include <QMessageBox>
 #include <dmrootgroup.h>
+#include <QMainWindow>
 
 
 namespace DM {
@@ -243,7 +244,6 @@ private:
     std::vector<std::string> loadedModuleFiles;
     bool virtualRun;
     bool running;
-    QMessageBox *runningBox;
 
 };
 }

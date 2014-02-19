@@ -415,6 +415,8 @@ public:
     
     /** @brief Returns URL to the help of the module */
     virtual std::string getHelpUrl();
+    void setStatus(int s);
+    int getStatus();
 private:
     bool PythonModule;
     long id;
@@ -424,6 +426,7 @@ private:
 
     std::string uuid;
     std::string name;
+    int status;
 
     Simulation * simulation;
     std::map<std::string, DM::System *> ownedSystems;

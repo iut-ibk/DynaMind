@@ -110,6 +110,7 @@ Simulation::~Simulation() {
 
     delete data;
     delete moduleRegistry;
+
 }
 
 void Simulation::reloadModules() {
@@ -327,7 +328,7 @@ void Simulation::resetSimulation()
 void Simulation::run() {
     this->resetModules();
     this->startSimulation(false);
-
+    this->resetModules();
 }
 
 bool Simulation::startSimulation(bool virtualRun) {
@@ -335,13 +336,13 @@ bool Simulation::startSimulation(bool virtualRun) {
     if (!virtualRun)
     {
         running=true;
-        runningBox=new QMessageBox;
-        runningBox->setWindowTitle("Calculating");
-        runningBox->setText("Please wait.");
-        runningBox->show();
+        //runningBox->setWindowTitle("Calculating");
+        //runningBox->setText("Please wait.");
+
     }
     if (!virtualRun)
         this->startSimulation(true);
+
     this->data->simulationStatus = SIM_OK;
     this->virtualRun = virtualRun;
     Logger(Standard) << "Run Simulation";
@@ -355,7 +356,11 @@ bool Simulation::startSimulation(bool virtualRun) {
     if (!virtualRun) {
         Logger(Standard) << "End Simulation";
         running=false;
-        runningBox->hide();
+
+        foreach (SimulationObserver * so, data->simObserver) {
+            so->SimulationStatusChanged();
+        }
+
         //delete runningBox;
         return true;
     }

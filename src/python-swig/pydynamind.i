@@ -147,6 +147,7 @@ public:
     virtual const char *getClassName();
 
     virtual const char *getFileName();
+    virtual void setStatus(int s);
 };
 
 %extend Module {
