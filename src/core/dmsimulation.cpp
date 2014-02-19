@@ -335,10 +335,10 @@ bool Simulation::startSimulation(bool virtualRun) {
     if (!virtualRun)
     {
         running=true;
-        //runningBox=new QMessageBox;
-        //runningBox->setWindowTitle("Calculating");
-        //runningBox->setText("Please wait.");
-        //runningBox->show();
+        runningBox=new QMessageBox;
+        runningBox->setWindowTitle("Calculating");
+        runningBox->setText("Please wait.");
+        runningBox->show();
     }
     if (!virtualRun)
         this->startSimulation(true);
@@ -355,6 +355,7 @@ bool Simulation::startSimulation(bool virtualRun) {
     if (!virtualRun) {
         Logger(Standard) << "End Simulation";
         running=false;
+        runningBox->hide();
         //delete runningBox;
         return true;
     }
