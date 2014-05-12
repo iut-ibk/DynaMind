@@ -24,44 +24,58 @@
  *
  */
 #include <dmlogsink.h>
+#include <dmlog.h>
+#include <qdatetime.h>
+using namespace DM;
 
-namespace DM {
-    OStreamLogSink::OStreamLogSink(std::ostream &ostream) : out(ostream) {
-        mutex = new QMutex(QMutex::Recursive);
-    }
+OStreamLogSink::OStreamLogSink(std::ostream &ostream) : out(ostream) {
+	mutex = new QMutex(QMutex::Recursive);
+    error = false;
+}
 
-    OStreamLogSink::~OStreamLogSink()
+OStreamLogSink::~OStreamLogSink()
+{
+	delete mutex;
+}
+
+LogSink &OStreamLogSink::operator <<(LogLevel new_level) {
+    return *this;
+}
+
+LogSink &OStreamLogSink::operator<<(const std::string &string) {
+	QMutexLocker locker(mutex);
+    if(string.find("ERROR") == std::string::npos)
+        return *this;
+    error = true;
+	out << string;
+	return *this;
+}
+
+LogSink &OStreamLogSink::operator<<(const char *string) {
+	QMutexLocker locker(mutex);
+	out << string;
+	return *this;
+}
+
+LogSink &OStreamLogSink::operator<<(int i) {
+	QMutexLocker locker(mutex);
+	out << i;
+	return *this;
+}
+
+
+LogSink &OStreamLogSink::operator<<(double f) {
+	QMutexLocker locker(mutex);
+	out << f;
+	return *this;
+}
+LogSink &OStreamLogSink::operator<<(LSEndl e) {
+	QMutexLocker locker(mutex);
+    if(!error)
     {
-        delete mutex;
-    }
-
-    LogSink &OStreamLogSink::operator<<(const std::string &string) {
-        QMutexLocker locker(mutex);
-        out << string;
         return *this;
     }
-
-    LogSink &OStreamLogSink::operator<<(const char *string) {
-        QMutexLocker locker(mutex);
-        out << string;
-        return *this;
-    }
-
-    LogSink &OStreamLogSink::operator<<(int i) {
-        QMutexLocker locker(mutex);
-        out << i;
-        return *this;
-    }
-
-
-    LogSink &OStreamLogSink::operator<<(double f) {
-        QMutexLocker locker(mutex);
-        out << f;
-        return *this;
-    }
-    LogSink &OStreamLogSink::operator<<(LSEndl e) {
-        QMutexLocker locker(mutex);
-        out << std::endl;
-        return *this;
-    }
+    error = false;
+	out << std::endl;
+	return *this;
 }
