@@ -29,6 +29,7 @@ using namespace DM;
 
 OStreamLogSink::OStreamLogSink(std::ostream &ostream) : out(ostream) {
 	mutex = new QMutex(QMutex::Recursive);
+    printerror = false;
 }
 
 OStreamLogSink::~OStreamLogSink()
@@ -37,8 +38,11 @@ OStreamLogSink::~OStreamLogSink()
 }
 
 LogSink &OStreamLogSink::operator<<(const std::string &string) {
-	QMutexLocker locker(mutex);
-	out << string;
+    QMutexLocker locker(mutex);
+    if(string.find("ERROR") == std::string::npos)
+        return *this;
+    printerror = true;
+    out << string;
 	return *this;
 }
 
@@ -62,6 +66,9 @@ LogSink &OStreamLogSink::operator<<(double f) {
 }
 LogSink &OStreamLogSink::operator<<(LSEndl e) {
 	QMutexLocker locker(mutex);
+    if(!printerror)
+        return *this;
+    printerror = false;
 	out << std::endl;
 	return *this;
 }

@@ -78,6 +78,7 @@ public:
 private:
 	std::ostream &out;
 	QMutex *mutex;
+    bool printerror;
 };
 }
 #endif // LOGSINK_H
