@@ -31,7 +31,6 @@
 #include <dmcompilersettings.h>
 #include <QMutex>
 #include <QMutexLocker>
-#include <dmlog.h>
 
 
 namespace DM {
@@ -62,11 +61,9 @@ public:
 * can be used together with cout see Log for an example */
 class DM_HELPER_DLL_EXPORT OStreamLogSink : public LogSink {
 public:
-    OStreamLogSink(std::ostream &ostream);
-    OStreamLogSink(std::ostream &ostream,LogLevel max);
+	OStreamLogSink(std::ostream &ostream);
 	~OStreamLogSink();
 	void close() {}
-    LogSink &operator <<(LogLevel new_level);
 	/** @brief sends a string to ostream*/
 	LogSink &operator<<(const std::string &string);
 	/** @brief sends a char*  to ostream*/
@@ -81,7 +78,7 @@ public:
 private:
 	std::ostream &out;
 	QMutex *mutex;
-    bool error;
 };
 }
 #endif // LOGSINK_H
+

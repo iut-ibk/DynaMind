@@ -24,13 +24,11 @@
  *
  */
 #include <dmlogsink.h>
-#include <dmlog.h>
-#include <qdatetime.h>
+
 using namespace DM;
 
 OStreamLogSink::OStreamLogSink(std::ostream &ostream) : out(ostream) {
 	mutex = new QMutex(QMutex::Recursive);
-    error = false;
 }
 
 OStreamLogSink::~OStreamLogSink()
@@ -38,15 +36,8 @@ OStreamLogSink::~OStreamLogSink()
 	delete mutex;
 }
 
-LogSink &OStreamLogSink::operator <<(LogLevel new_level) {
-    return *this;
-}
-
 LogSink &OStreamLogSink::operator<<(const std::string &string) {
 	QMutexLocker locker(mutex);
-    if(string.find("ERROR") == std::string::npos)
-        return *this;
-    error = true;
 	out << string;
 	return *this;
 }
@@ -71,11 +62,7 @@ LogSink &OStreamLogSink::operator<<(double f) {
 }
 LogSink &OStreamLogSink::operator<<(LSEndl e) {
 	QMutexLocker locker(mutex);
-    if(!error)
-    {
-        return *this;
-    }
-    error = false;
 	out << std::endl;
 	return *this;
 }
+
