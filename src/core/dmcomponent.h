@@ -38,9 +38,13 @@
 #include <QMutex>
 #include <QMutexLocker>
 
+#include <ogrsf_frmts.h>
+
 #ifdef SWIG
 #define DM_HELPER_DLL_EXPORT
 #endif
+
+#define GDAL;
 
 namespace DM {
 
@@ -76,7 +80,7 @@ public:
     Component& operator=(Component const& other);
 
     /** @brief The default constructor creates a UUID for the component */
-    Component();
+	Component();
 
     /** @brief Copies a component */
     Component(const Component& s);
@@ -166,11 +170,22 @@ protected:
     System* currentSys;
     bool	isInserted;
     std::vector<Attribute*> ownedattributes;
+
+#ifdef GDAL
+	OGRFeature * getOGRFeature();
+#endif
+
 private:
 
     Attribute* getExistingAttribute(const std::string& name) const;
     bool addAttribute(Attribute *pAttribute);
     void CopyFrom(const Component &c, bool successor = false);
+
+#ifdef GDAL
+	OGRFeature * ogrFeature;
+	void initFeature();
+#endif
+
 };
 }
 #endif // COMPONENT_H

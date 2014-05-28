@@ -43,16 +43,24 @@
 
 using namespace DM;
 
+
+
 Component::Component()
 {
+//#ifndef GDAL
     DBConnector::getInstance();
     uuid = QUuid::createUuid();
 
     currentSys = NULL;
     isInserted = false;
     mutex = new QMutex(QMutex::Recursive);
+//#endif
+
 
     DBConnector::getInstance();
+#ifdef GDAL
+	ogrFeature = NULL;
+#endif
 }
 
 Component::Component(bool b)
@@ -79,8 +87,22 @@ void Component::CopyFrom(const Component &c, bool successor)
         }
     }
     else
-        ownedattributes = c.ownedattributes;
+		ownedattributes = c.ownedattributes;
 }
+
+#ifdef GDAL
+void Component::initFeature()
+{
+	QMutexLocker ml(mutex);
+	if (ogrFeature != NULL)
+		return;
+	if (this->currentSys == NULL)
+		return;
+	Logger(Debug) << "Init Feature";
+	ogrFeature = OGRFeature::CreateFeature(this->currentSys->getComponentLayer()->GetLayerDefn());
+	Logger(Debug) << "Done Feature";
+}
+#endif
 
 Component::Component(const Component& c)
 {
@@ -105,9 +127,14 @@ Component::~Component()
 
     ownedattributes.clear();
     // if this class is not of type component, nothing will happen
-    SQLDelete();
+#ifndef GDAL
+	SQLDelete();
+	QMutexLocker ml(mutex);
+
     mutex->unlock();
+
     delete mutex;
+#endif
 }
 
 Component& Component::operator=(const Component& other)
@@ -153,6 +180,7 @@ QString Component::getTableName()
 
 bool Component::addAttribute(const std::string& name, double val)
 {
+#ifndef GDAL
     QMutexLocker ml(mutex);
 
     if (Attribute* a = getExistingAttribute(name))
@@ -162,6 +190,21 @@ bool Component::addAttribute(const std::string& name, double val)
     }
 
     return this->addAttribute(new Attribute(name, val));
+#endif
+
+#ifdef GDAL
+	if (this->ogrFeature->GetDefnRef() == NULL) {
+		Logger(Debug) << "Error";
+		return false;
+	}
+	if (this->ogrFeature->GetDefnRef()->GetFieldIndex(name.c_str()) == -1) {
+		OGRFieldDefn * oField = new OGRFieldDefn(name.c_str(), OFTReal);
+		this->ogrFeature->GetDefnRef()->AddFieldDefn(oField);
+	}
+	Logger(Debug) << this->ogrFeature->GetDefnRef()->GetFieldIndex(name.c_str());
+
+	return true;
+#endif
 }
 
 bool Component::addAttribute(const std::string& name, const std::string& val)
@@ -267,6 +310,7 @@ Attribute* Component::getAttribute(const std::string& name)
 
     QMutexLocker ml(mutex);
 
+#ifndef GDAL
     std::vector<Attribute*>::iterator it;
     for (it = ownedattributes.begin(); it != ownedattributes.end(); ++it)
         if ((*it)->getName() == name)
@@ -310,6 +354,13 @@ Attribute* Component::getAttribute(const std::string& name)
     }
 
     return *it;
+#endif
+
+#ifdef GDAL
+	//DM::Attribute * attr = new DM::Attribute();
+	//attr->setDouble(this->ogrFeature->GetFieldAsDouble(name.c_str()));
+	//return attr;
+#endif
 }
 
 const std::vector<Attribute*>& Component::getAllAttributes()
@@ -342,6 +393,9 @@ void Component::SetOwner(Component *owner)
     QMutexLocker ml(mutex);
 
     currentSys = owner->getCurrentSystem();
+#ifdef GDAL
+	this->initFeature();
+#endif
 }
 
 void Component::_moveToDb()
@@ -374,7 +428,7 @@ void Component::_moveAttributesToDb()
 
 void Component::SQLDelete()
 {
-    QMutexLocker ml(mutex);
+	QMutexLocker ml(mutex);
 
     if(isInserted)
     {
@@ -400,3 +454,11 @@ Attribute* Component::getExistingAttribute(const std::string& name) const
 
     return NULL;
 }
+
+#ifdef GDAL
+	OGRFeature * Component::getOGRFeature()
+	{
+		return ogrFeature;
+	}
+
+#endif

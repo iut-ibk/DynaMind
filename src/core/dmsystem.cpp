@@ -49,6 +49,18 @@ System::System() : Component(true)
     DBConnector::getInstance();
     SQLInsert();
     isInserted = true;
+
+#ifdef GDAL
+	OGRRegisterAll();
+	poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "Memory" );
+	poDS = poDrive->CreateDataSource(this->getUUID().c_str());
+	if( poDS == NULL )
+	{
+		DM::Logger(DM::Error) << "couldn't create source";
+	}
+	componentLayer= poDS->CreateLayer("components", NULL, wkbNone, NULL );
+	pointLayer = poDS->CreateLayer("nodes", NULL, wkbPoint, NULL );
+#endif
 }
 
 System::System(const System& s) : Component(s, true)
@@ -81,12 +93,22 @@ QString System::getTableName()
 {
     return "systems";
 }
+OGRLayer *System::getPoint_layer() const
+{
+	return pointLayer;
+}
+
+void System::setPoint_layer(OGRLayer *value)
+{
+	pointLayer = value;
+}
+
 Component * System::addComponent(Component* c, const DM::View & view)
 {
-    QMutexLocker ml(mutex);
+	QMutexLocker ml(mutex);
 
-    if(!addChild(c)) {
-        delete c;
+	if(!addChild(c)) {
+		delete c;
         return 0;
     }
 

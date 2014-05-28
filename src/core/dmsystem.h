@@ -33,6 +33,8 @@
 #include <dmview.h>
 #include <dmcomponent.h>
 
+#include <ogrsf_frmts.h>
+
 #ifdef SWIG
 #define DM_HELPER_DLL_EXPORT
 #endif
@@ -182,9 +184,13 @@ public:
 
     /** @brief imports all components according to the currently applied views (update view) */
     void _importViewElementsFromDB();
+	OGRLayer *getPoint_layer() const;
+	void setPoint_layer(OGRLayer *value);
+
 protected:
-    const Edge* getEdgeReadOnly(Node* start, Node* end);
+	const Edge* getEdgeReadOnly(Node* start, Node* end);
 private:
+
     void SQLInsert();
     void SQLUpdateStates();
     bool addChild(Component *newcomponent);
@@ -238,6 +244,18 @@ private:
     };
 	friend class Component;
     std::map<std::string, ViewCache > viewCaches;
+
+#ifdef GDAL
+public:
+	OGRLayer *getComponentLayer() {return this->componentLayer;}
+private:
+	OGRDataSource		*poDS;
+	OGRSFDriver			*poDrive;
+
+	OGRLayer * componentLayer;
+	OGRLayer * pointLayer;
+#endif
+
 };
 
 typedef std::map<std::string, DM::System*> SystemMap;
