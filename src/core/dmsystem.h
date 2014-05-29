@@ -248,12 +248,14 @@ private:
 #ifdef GDAL
 public:
 	OGRLayer *getComponentLayer() {return this->componentLayer;}
+    OGRLayer *getNodeLayer() {return this->nodeLayer;}
+    void writeToDisk(){OGRDataSource::DestroyDataSource( poDS );}
 private:
 	OGRDataSource		*poDS;
 	OGRSFDriver			*poDrive;
 
 	OGRLayer * componentLayer;
-	OGRLayer * pointLayer;
+    OGRLayer * nodeLayer;
 #endif
 
 };

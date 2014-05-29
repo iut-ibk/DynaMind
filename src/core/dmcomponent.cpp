@@ -59,7 +59,7 @@ Component::Component()
 
     DBConnector::getInstance();
 #ifdef GDAL
-	ogrFeature = NULL;
+    OGRfeatureID = -1;
 #endif
 }
 
@@ -71,6 +71,10 @@ Component::Component(bool b)
     currentSys = NULL;
     isInserted = false;
     mutex = new QMutex(QMutex::Recursive);
+
+#ifdef GDAL
+    OGRfeatureID = -1;
+#endif
 }
 
 void Component::CopyFrom(const Component &c, bool successor)
@@ -94,13 +98,27 @@ void Component::CopyFrom(const Component &c, bool successor)
 void Component::initFeature()
 {
 	QMutexLocker ml(mutex);
-	if (ogrFeature != NULL)
+    if (this->OGRfeatureID !=  -1)
 		return;
 	if (this->currentSys == NULL)
 		return;
-	Logger(Debug) << "Init Feature";
-	ogrFeature = OGRFeature::CreateFeature(this->currentSys->getComponentLayer()->GetLayerDefn());
-	Logger(Debug) << "Done Feature";
+    OGRFeature * ogrFeature = NULL;
+    switch (getType()) {
+        case COMPONENT:
+            ogrFeature = OGRFeature::CreateFeature(this->currentSys->getComponentLayer()->GetLayerDefn());
+            if( this->currentSys->getComponentLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
+                Logger(Error) << "Error while creating Component";
+            }
+            break;
+        case NODE:
+            ogrFeature = OGRFeature::CreateFeature(this->currentSys->getNodeLayer()->GetLayerDefn());
+            if( this->currentSys->getNodeLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
+                Logger(Error) << "Error while creating Node";
+            }
+            break;
+    }
+    OGRfeatureID = ogrFeature->GetFID();
+    OGRFeature::DestroyFeature( ogrFeature );
 }
 #endif
 
@@ -109,6 +127,9 @@ Component::Component(const Component& c)
     currentSys = NULL;
     CopyFrom(c);
     mutex = new QMutex(QMutex::Recursive);
+#ifdef GDAL
+    OGRfeatureID = -1;
+#endif
 }
 
 Component::Component(const Component& c, bool bInherited)
@@ -116,6 +137,9 @@ Component::Component(const Component& c, bool bInherited)
     currentSys = NULL;
     CopyFrom(c);
     mutex = new QMutex(QMutex::Recursive);
+#ifdef GDAL
+    OGRfeatureID = -1;
+#endif
 }
 
 Component::~Component()
@@ -127,14 +151,14 @@ Component::~Component()
 
     ownedattributes.clear();
     // if this class is not of type component, nothing will happen
-#ifndef GDAL
+//#ifndef GDAL
 	SQLDelete();
 	QMutexLocker ml(mutex);
 
     mutex->unlock();
 
-    delete mutex;
-#endif
+    //delete mutex;
+
 }
 
 Component& Component::operator=(const Component& other)
@@ -159,8 +183,6 @@ std::string Component::getUUID()
 
         name = QUuid::createUuid().toString().toStdString();
         a->setString(name);
-        //if(this->currentSys && currentSys != this)	// avoid self referencing
-        //	currentSys->componentNameMap[name] = this;
     }
     return name;
 }
@@ -180,31 +202,25 @@ QString Component::getTableName()
 
 bool Component::addAttribute(const std::string& name, double val)
 {
-#ifndef GDAL
+//#ifndef GDAL
     QMutexLocker ml(mutex);
+    if (this->OGRfeatureID == -1) {
+        if (Attribute* a = getExistingAttribute(name))
+        {
+            a->setDouble(val);
+            return true;
+        }
 
-    if (Attribute* a = getExistingAttribute(name))
-    {
-        a->setDouble(val);
-        return true;
-    }
-
-    return this->addAttribute(new Attribute(name, val));
-#endif
-
+        return this->addAttribute(new Attribute(name, val));
+    } else {
 #ifdef GDAL
-	if (this->ogrFeature->GetDefnRef() == NULL) {
-		Logger(Debug) << "Error";
-		return false;
-	}
-	if (this->ogrFeature->GetDefnRef()->GetFieldIndex(name.c_str()) == -1) {
-		OGRFieldDefn * oField = new OGRFieldDefn(name.c_str(), OFTReal);
-		this->ogrFeature->GetDefnRef()->AddFieldDefn(oField);
-	}
-	Logger(Debug) << this->ogrFeature->GetDefnRef()->GetFieldIndex(name.c_str());
-
-	return true;
+    OGRFeature * f = this->currentSys->getComponentLayer()->GetFeature(this->OGRfeatureID);
+    f->SetField(name.c_str(), val);
+    this->currentSys->getComponentLayer()->SetFeature(f);
+    OGRFeature::DestroyFeature(f);
+    return true;
 #endif
+    }
 }
 
 bool Component::addAttribute(const std::string& name, const std::string& val)
@@ -310,56 +326,42 @@ Attribute* Component::getAttribute(const std::string& name)
 
     QMutexLocker ml(mutex);
 
-#ifndef GDAL
-    std::vector<Attribute*>::iterator it;
-    for (it = ownedattributes.begin(); it != ownedattributes.end(); ++it)
-        if ((*it)->getName() == name)
-            break;
+    if (this->OGRfeatureID == -1) {
+        //#ifndef GDAL
+        std::vector<Attribute*>::iterator it;
+        for (it = ownedattributes.begin(); it != ownedattributes.end(); ++it)
+            if ((*it)->getName() == name)
+                break;
 
-    if (it == ownedattributes.end())
-	{
-		/*
-		Attribute::AttributeType type = Attribute::NOTYPE;
-		// get type
-		if (this->currentSys)
-		{
-			mforeach(const System::ViewCache& vc, this->currentSys->viewCaches)
-			{
-				if (vc.view.hasAttribute(name))
-				{
-					Logger(Warning) << "extracting type of attribute '" << name
-									<< "' from view '" << vc.view.getName() << "'";
-					type = vc.view.getAttributeType(name);
-					break;
-				}
-			}
-		}
-		*/
+        if (it == ownedattributes.end())
+        {
+            // create new attribute with default type: DOUBLE
+            Attribute* a = new Attribute(name, Attribute::DOUBLE);
+            a->setOwner(this);
+            ownedattributes.push_back(a);
 
-		// create new attribute with default type: DOUBLE
-		Attribute* a = new Attribute(name, Attribute::DOUBLE);
-		a->setOwner(this);
-		ownedattributes.push_back(a);
+            return a;
+        }
 
-        return a;
+        else if((*it)->GetOwner() != this)
+        {
+            // successor copy
+            Attribute* a = new Attribute(**it);
+            ownedattributes.erase(it);
+            ownedattributes.push_back(a);
+            a->setOwner(this);
+            return a;
+        }
+
+        return *it;
     }
-    else if((*it)->GetOwner() != this)
-	{
-        // successor copy
-        Attribute* a = new Attribute(**it);
-        ownedattributes.erase(it);
-        ownedattributes.push_back(a);
-        a->setOwner(this);
-        return a;
-    }
-
-    return *it;
-#endif
 
 #ifdef GDAL
-	//DM::Attribute * attr = new DM::Attribute();
-	//attr->setDouble(this->ogrFeature->GetFieldAsDouble(name.c_str()));
-	//return attr;
+    OGRFeature * f = this->currentSys->getComponentLayer()->GetFeature(this->OGRfeatureID);
+    DM::Attribute * attr = new DM::Attribute(name, Attribute::DOUBLE);
+    attr->setDouble(f->GetFieldAsDouble(name.c_str()));
+    OGRFeature::DestroyFeature(f);
+    return attr;
 #endif
 }
 
@@ -455,10 +457,3 @@ Attribute* Component::getExistingAttribute(const std::string& name) const
     return NULL;
 }
 
-#ifdef GDAL
-	OGRFeature * Component::getOGRFeature()
-	{
-		return ogrFeature;
-	}
-
-#endif

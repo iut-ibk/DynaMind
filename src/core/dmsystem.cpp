@@ -39,6 +39,7 @@
 #include <QSqlQuery>
 #include <QUuid>
 #include <QRegExp>
+#include "cpl_string.h"
 
 using namespace DM;
 
@@ -50,16 +51,26 @@ System::System() : Component(true)
     SQLInsert();
     isInserted = true;
 
+
+
 #ifdef GDAL
 	OGRRegisterAll();
-	poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "Memory" );
-	poDS = poDrive->CreateDataSource(this->getUUID().c_str());
-	if( poDS == NULL )
+    poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "SQLite" );
+    char ** options = NULL;
+    options = CSLSetNameValue( options, "OGR_SQLITE_CACHE", "1024" );
+
+
+    poDS = poDrive->CreateDataSource("/tmp/mem.db",options );
+    if( poDS == NULL )
 	{
 		DM::Logger(DM::Error) << "couldn't create source";
 	}
-	componentLayer= poDS->CreateLayer("components", NULL, wkbNone, NULL );
-	pointLayer = poDS->CreateLayer("nodes", NULL, wkbPoint, NULL );
+    componentLayer= poDS->CreateLayer("components", NULL, wkbNone, NULL );
+
+
+    //poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "ESRI Shapefile" );
+    //poDS = poDrive->CreateDataSource( "/tmp/point_out.shp", NULL );
+    nodeLayer = poDS->CreateLayer("nodes", NULL, wkbPoint, NULL );
 #endif
 }
 
@@ -95,12 +106,12 @@ QString System::getTableName()
 }
 OGRLayer *System::getPoint_layer() const
 {
-	return pointLayer;
+    return nodeLayer;
 }
 
 void System::setPoint_layer(OGRLayer *value)
 {
-	pointLayer = value;
+    nodeLayer = value;
 }
 
 Component * System::addComponent(Component* c, const DM::View & view)

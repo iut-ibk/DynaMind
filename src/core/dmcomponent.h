@@ -171,8 +171,9 @@ protected:
     bool	isInserted;
     std::vector<Attribute*> ownedattributes;
 
+
 #ifdef GDAL
-	OGRFeature * getOGRFeature();
+    long OGRfeatureID;
 #endif
 
 private:
@@ -182,8 +183,7 @@ private:
     void CopyFrom(const Component &c, bool successor = false);
 
 #ifdef GDAL
-	OGRFeature * ogrFeature;
-	void initFeature();
+        void initFeature();
 #endif
 
 };

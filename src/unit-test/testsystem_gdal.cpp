@@ -32,6 +32,13 @@
 #include <dmlogger.h>
 #include <dmlogsink.h>
 #include <dmcomponent.h>
+#include <dmnode.h>
+
+#include <stdio.h>      /* printf, scanf, puts, NULL */
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
+#include <QTimer>
+
 
 namespace DM {
 
@@ -42,92 +49,46 @@ TEST_F(TestSystem_GDAL, addNode) {
 
 	DM::Logger(DM::Standard) << "Test GDAL System";
 	DM::System sys;
-	Logger(Debug) << sys.getComponentLayer()->GetLayerDefn()->GetFieldCount();
+    OGRFieldDefn oField( "test", OFTReal );
+    sys.getComponentLayer()->CreateField(&oField);
 
 	DM::Component cmp;
 	sys.addComponent(&cmp);
 
+    cmp.addAttribute("test", 100.);
+
+
+    Logger(Debug) << cmp.getAttribute("test")->getDouble();
+
+    /* initialize random seed: */
+    srand (time(NULL));
+
+    QTime myTimer;
+    myTimer.start();
+
+    int counter = 0;
+    sys.getNodeLayer()->StartTransaction();
+    for (long i = 0; i < 100000 ; i++){
+        DM::Node node;
+        sys.addNode(&node);
+        node.set(rand() % 10000 + 1,rand() % 10000 + 1,rand() % 10000 + 1);
+        counter++;
+        if (counter==10000) {
+            sys.getNodeLayer()->CommitTransaction();
+            sys.getNodeLayer()->StartTransaction();
+            counter = 0;
+            //Logger(Debug) << i;
+        }
+    }
+    sys.getNodeLayer()->CommitTransaction();
+
+    Logger(Debug) << myTimer.elapsed();
+
+
 	Logger(Debug) << "Done";
-	//cmp.addAttribute("test", 100.);
-
-	//Logger(Debug) << cmp.getAttribute("test")->getDouble();
-
-/*	OGRLayer * poLayer = sys.getPoint_layer();
-	OGRFieldDefn oField( "Name", OFTString );
-
-
-	oField.SetWidth(32);
-	poLayer->CreateField(&oField);
-
-	OGRFeature *poFeature;
-	double x =1;
-	double y =2;
-
-	char szName[33];
-	poFeature = OGRFeature::CreateFeature( poLayer->GetLayerDefn() );
-	poFeature->SetField( "Name", szName );
-
-	OGRPoint pt;
-	pt.setX( x );
-	pt.setY( y );
-
-	poFeature->SetGeometry( &pt );
-
-
-	if( poLayer->CreateFeature( poFeature ) != OGRERR_NONE )
-	{
-	   printf( "Failed to create feature in shapefile.\n" );
-	   exit( 1 );
-	}
-	Logger(Debug) << "fcount " << poFeature->GetFID();
-	OGRFeature * f1 = poFeature;
-	OGRFeature::DestroyFeature( poFeature );
-
-	OGRFieldDefn oField_empty("bugsi", OFTInteger);
-
-	OGRFeatureDefn featurDef;
-	featurDef.AddFieldDefn(&oField_empty);
-	poFeature = OGRFeature::CreateFeature(&featurDef );
-	poFeature->SetField( "bugsi", 1 );
-
-	pt.setX( x+1 );
-	pt.setY( y+1 );
-
-	poFeature->SetGeometry( &pt );
-
-
-	if( poLayer->CreateFeature( poFeature ) != OGRERR_NONE )
-	{
-	   printf( "Failed to create feature in shapefile.\n" );
-	   exit( 1 );
-	}
-
-	//OGRFeature * f2 = poFeature;
-	Logger(Debug) << "fcount " << poFeature->GetFID();
-	OGRFeature::DestroyFeature( poFeature );
-
-	std::vector<OGRFeature *> list;
-
-	Logger(Debug) << poLayer->GetFeatureCount();
-
-	poLayer->ResetReading();
-	while( (poFeature = poLayer->GetNextFeature()) != NULL )
-	{
-
-		if (std::find(list.begin(), list.end(), poFeature) != list.end()) {
-			Logger(Debug) << "found";
-		} else {
-			Logger(Debug) << "not found";
-		}
-		Logger(Debug) << poFeature->GetFID();
-		Logger(Debug) << "Feature Count";
-		Logger(Debug) << poFeature->GetFieldCount();
-		Logger(Debug) << poFeature->GetFieldDefnRef(0)->GetNameRef();
-		Logger(Debug) << poFeature->GetFieldAsString(0);
-	}*/
-
-
 
 }
 }
 
+//Shapefile 10.000.000 3.39 GB 124427ms
+//Shapefile 10.000.000 2.29 GB 299377ms //Shapefile using commit and end transaction
