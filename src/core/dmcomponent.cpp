@@ -152,12 +152,12 @@ Component::~Component()
     ownedattributes.clear();
     // if this class is not of type component, nothing will happen
 //#ifndef GDAL
-	SQLDelete();
-	QMutexLocker ml(mutex);
+    //SQLDelete();
+
 
     mutex->unlock();
 
-    //delete mutex;
+    delete mutex;
 
 }
 

@@ -90,5 +90,9 @@ TEST_F(TestSystem_GDAL, addNode) {
 }
 }
 
-//Shapefile 10.000.000 3.39 GB 124427ms
-//Shapefile 10.000.000 2.29 GB 299377ms //Shapefile using commit and end transaction
+//10.000.000 Memory  54508 ms 1.91 GB
+//10.000.000 SQLite 312392 ms 634.7 MB
+//10.000.000 SQLite 254157 ms  17.1 MB //Without indizes
+
+//1.000.000 SQLite  28057 ms 79.6 MB
+//1.000.000 SQLite  25663 ms 17.1 MB //Without indizes

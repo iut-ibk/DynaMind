@@ -56,11 +56,13 @@ System::System() : Component(true)
 #ifdef GDAL
 	OGRRegisterAll();
     poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "SQLite" );
+    //poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "Memory" );
     char ** options = NULL;
     options = CSLSetNameValue( options, "OGR_SQLITE_CACHE", "1024" );
 
 
     poDS = poDrive->CreateDataSource("/tmp/mem.db",options );
+    //poDS = poDrive->CreateDataSource("mem" );
     if( poDS == NULL )
 	{
 		DM::Logger(DM::Error) << "couldn't create source";
@@ -144,7 +146,7 @@ Node* System::addNode(Node* node)
         delete node;
         return 0;
     }
-    nodes.insert(node);
+    //nodes.insert(node);
 
     return node;
 }
@@ -386,7 +388,7 @@ bool System::addChild(Component *newcomponent)
     if(!newcomponent)
         return false;
 
-    quuidMap[newcomponent->getQUUID()] = newcomponent;
+    //quuidMap[newcomponent->getQUUID()] = newcomponent;
     newcomponent->SetOwner(this);
 
     return true;
