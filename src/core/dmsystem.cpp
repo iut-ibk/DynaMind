@@ -50,6 +50,7 @@ System::System() : Component(true)
     DBConnector::getInstance();
     SQLInsert();
     isInserted = true;
+    id = 0;
 
 
 
@@ -68,11 +69,15 @@ System::System() : Component(true)
 		DM::Logger(DM::Error) << "couldn't create source";
 	}
     componentLayer= poDS->CreateLayer("components", NULL, wkbNone, NULL );
+    OGRFieldDefn oField( "dynamind_id", OFTInteger );
+    componentLayer->CreateField(&oField);
 
 
     //poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "ESRI Shapefile" );
     //poDS = poDrive->CreateDataSource( "/tmp/point_out.shp", NULL );
     nodeLayer = poDS->CreateLayer("nodes", NULL, wkbPoint, NULL );
+    nodeLayer->CreateField(&oField);
+
 #endif
 }
 

@@ -54,6 +54,8 @@ typedef std::pair<std::string, Edge*> EdgePair;
 typedef std::pair<std::string, Node*> NodePair;
 typedef std::pair<std::string, Face*> FacePair;
 
+typedef std::pair<int,int> ComponentIDPair;
+
 class DerivedSystem;
 
 /** @class DM::System
@@ -72,6 +74,7 @@ class  DM_HELPER_DLL_EXPORT System : public Component
 {
     friend class DerivedSystem;
 public:
+    long id;
     bool removeChild(Component* c);
 
     /*@deprecated*/
@@ -204,6 +207,8 @@ private:
     std::set<RasterData *>	rasterdata;
     std::set<System*>		subsystems;
     std::set<Component* >	components;
+
+    std::map<int, ComponentIDPair> DynaMindIDToOGRID; //also contains the IDs in View
 
     std::map<QUuid, Component*>	quuidMap;
 

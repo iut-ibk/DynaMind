@@ -174,6 +174,7 @@ protected:
 
 #ifdef GDAL
     long OGRfeatureID;
+    long DynaMindID;
 #endif
 
 private:

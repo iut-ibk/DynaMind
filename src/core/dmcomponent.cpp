@@ -60,6 +60,7 @@ Component::Component()
     DBConnector::getInstance();
 #ifdef GDAL
     OGRfeatureID = -1;
+    DynaMindID = -1;
 #endif
 }
 
@@ -74,6 +75,7 @@ Component::Component(bool b)
 
 #ifdef GDAL
     OGRfeatureID = -1;
+    DynaMindID = -1;
 #endif
 }
 
@@ -103,20 +105,27 @@ void Component::initFeature()
 	if (this->currentSys == NULL)
 		return;
     OGRFeature * ogrFeature = NULL;
+
+    if (this->DynaMindID == -1) {
+        this->DynaMindID = this->currentSys->id++;
+    }
     switch (getType()) {
         case COMPONENT:
             ogrFeature = OGRFeature::CreateFeature(this->currentSys->getComponentLayer()->GetLayerDefn());
+            ogrFeature->SetField(0,  (int)this->DynaMindID);
             if( this->currentSys->getComponentLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
                 Logger(Error) << "Error while creating Component";
             }
             break;
         case NODE:
             ogrFeature = OGRFeature::CreateFeature(this->currentSys->getNodeLayer()->GetLayerDefn());
+            ogrFeature->SetField(0, (int)this->DynaMindID);
             if( this->currentSys->getNodeLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
                 Logger(Error) << "Error while creating Node";
             }
             break;
     }
+
     OGRfeatureID = ogrFeature->GetFID();
     OGRFeature::DestroyFeature( ogrFeature );
 }
@@ -129,6 +138,7 @@ Component::Component(const Component& c)
     mutex = new QMutex(QMutex::Recursive);
 #ifdef GDAL
     OGRfeatureID = -1;
+    DynaMindID = -1;
 #endif
 }
 
@@ -139,6 +149,7 @@ Component::Component(const Component& c, bool bInherited)
     mutex = new QMutex(QMutex::Recursive);
 #ifdef GDAL
     OGRfeatureID = -1;
+    DynaMindID = -1;
 #endif
 }
 
