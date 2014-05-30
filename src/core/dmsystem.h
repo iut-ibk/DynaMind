@@ -54,8 +54,6 @@ typedef std::pair<std::string, Edge*> EdgePair;
 typedef std::pair<std::string, Node*> NodePair;
 typedef std::pair<std::string, Face*> FacePair;
 
-typedef std::pair<int,int> ComponentIDPair;
-
 class DerivedSystem;
 
 /** @class DM::System
@@ -208,16 +206,18 @@ private:
     std::set<System*>		subsystems;
     std::set<Component* >	components;
 
-    std::map<int, ComponentIDPair> DynaMindIDToOGRID; //also contains the IDs in View
+
 
     std::map<QUuid, Component*>	quuidMap;
 
     std::vector<DM::System*> sucessors;
 
     //std::map<std::string, std::vector<Component*> > views;
+public:
     class ViewCache
     {
     public:
+        DM::System * currentSys;
         struct Equation
         {
             Equation()
@@ -241,14 +241,20 @@ private:
         bool remove(Component* c);
         bool legal(Component* c);
 
+        DM::Component * getElement(int id);
+        long getNumberOfElements();
+
         std::set<Component*> filteredElements;
         System* sys;
         std::set<QUuid>	rawElements;
+        std::vector<QUuid> rawElementsDM;
     //private:
         View view;
     };
 	friend class Component;
     std::map<std::string, ViewCache > viewCaches;
+    ViewCache * getViewCache(DM::View & v);
+    long getOGRfeatureIDfromUUID(QUuid id);
 
 #ifdef GDAL
 public:
@@ -261,6 +267,7 @@ private:
 
 	OGRLayer * componentLayer;
     OGRLayer * nodeLayer;
+    std::map<QUuid, std::pair<int, int> > DynaMindIDToOGRID; //also contains the IDs in View
 #endif
 
 };

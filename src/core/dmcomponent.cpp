@@ -60,7 +60,7 @@ Component::Component()
     DBConnector::getInstance();
 #ifdef GDAL
     OGRfeatureID = -1;
-    DynaMindID = -1;
+    DynaMindID = "";
 #endif
 }
 
@@ -75,7 +75,7 @@ Component::Component(bool b)
 
 #ifdef GDAL
     OGRfeatureID = -1;
-    DynaMindID = -1;
+    DynaMindID = "";
 #endif
 }
 
@@ -106,20 +106,20 @@ void Component::initFeature()
 		return;
     OGRFeature * ogrFeature = NULL;
 
-    if (this->DynaMindID == -1) {
-        this->DynaMindID = this->currentSys->id++;
+    if (this->DynaMindID.empty()) {
+        this->DynaMindID = this->uuid.createUuid().toString().toStdString().c_str();
     }
     switch (getType()) {
         case COMPONENT:
             ogrFeature = OGRFeature::CreateFeature(this->currentSys->getComponentLayer()->GetLayerDefn());
-            ogrFeature->SetField(0,  (int)this->DynaMindID);
+            ogrFeature->SetField(0,  this->DynaMindID.c_str());
             if( this->currentSys->getComponentLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
                 Logger(Error) << "Error while creating Component";
             }
             break;
         case NODE:
             ogrFeature = OGRFeature::CreateFeature(this->currentSys->getNodeLayer()->GetLayerDefn());
-            ogrFeature->SetField(0, (int)this->DynaMindID);
+            ogrFeature->SetField(0,  this->DynaMindID.c_str());
             if( this->currentSys->getNodeLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
                 Logger(Error) << "Error while creating Node";
             }
@@ -138,8 +138,17 @@ Component::Component(const Component& c)
     mutex = new QMutex(QMutex::Recursive);
 #ifdef GDAL
     OGRfeatureID = -1;
-    DynaMindID = -1;
+    DynaMindID = "";
 #endif
+}
+
+Component::Component(QUuid id, System *s)
+{
+    currentSys = s;
+    mutex = new QMutex(QMutex::Recursive);
+    DynaMindID = id.toString().toStdString();
+    OGRfeatureID = currentSys->getOGRfeatureIDfromUUID(id);
+
 }
 
 Component::Component(const Component& c, bool bInherited)
@@ -149,7 +158,7 @@ Component::Component(const Component& c, bool bInherited)
     mutex = new QMutex(QMutex::Recursive);
 #ifdef GDAL
     OGRfeatureID = -1;
-    DynaMindID = -1;
+    DynaMindID = "";
 #endif
 }
 
@@ -210,10 +219,30 @@ QString Component::getTableName()
 {
     return "components";
 }
+long Component::getOGRfeatureID() const
+{
+    return OGRfeatureID;
+}
+
+void Component::setOGRfeatureID(long value)
+{
+    OGRfeatureID = value;
+}
+
+QUuid Component::getDynaMindID() const
+{
+    return QUuid(QString::fromStdString(this->DynaMindID));
+}
+
+void Component::setDynaMindID(const std::string &value)
+{
+    DynaMindID = value;
+}
+
 
 bool Component::addAttribute(const std::string& name, double val)
 {
-//#ifndef GDAL
+    //#ifndef GDAL
     QMutexLocker ml(mutex);
     if (this->OGRfeatureID == -1) {
         if (Attribute* a = getExistingAttribute(name))
@@ -369,8 +398,11 @@ Attribute* Component::getAttribute(const std::string& name)
 
 #ifdef GDAL
     OGRFeature * f = this->currentSys->getComponentLayer()->GetFeature(this->OGRfeatureID);
-    DM::Attribute * attr = new DM::Attribute(name, Attribute::DOUBLE);
-    attr->setDouble(f->GetFieldAsDouble(name.c_str()));
+    if (f == 0) {
+        f = this->currentSys->getNodeLayer()->GetFeature(this->OGRfeatureID);
+    }
+    DM::Attribute * attr = new DM::Attribute(name, Attribute::STRING);
+    attr->setString(f->GetFieldAsString(name.c_str()));
     OGRFeature::DestroyFeature(f);
     return attr;
 #endif

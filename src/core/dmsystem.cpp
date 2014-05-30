@@ -69,7 +69,7 @@ System::System() : Component(true)
 		DM::Logger(DM::Error) << "couldn't create source";
 	}
     componentLayer= poDS->CreateLayer("components", NULL, wkbNone, NULL );
-    OGRFieldDefn oField( "dynamind_id", OFTInteger );
+    OGRFieldDefn oField( "dynamind_id", OFTString );
     componentLayer->CreateField(&oField);
 
 
@@ -110,6 +110,19 @@ Components System::getType() const
 QString System::getTableName()
 {
     return "systems";
+}
+
+System::ViewCache *System::getViewCache(View &v)
+{
+    ViewCache * vc = &viewCaches[v.getName()];
+    vc->currentSys = this;
+    return  vc;
+}
+
+long System::getOGRfeatureIDfromUUID(QUuid id)
+{
+    std::pair<int,int> p = this->DynaMindIDToOGRID[id];
+    return p.first;
 }
 OGRLayer *System::getPoint_layer() const
 {
@@ -341,7 +354,6 @@ std::vector<Component*> System::getAllComponentsInView(const DM::View & view)
         const ViewCache &vc = viewCaches[view.getName()];
         foreach(Component* c, vc.filteredElements)
             comps.push_back(c);
-
     }
 
     return comps;
@@ -394,7 +406,9 @@ bool System::addChild(Component *newcomponent)
         return false;
 
     //quuidMap[newcomponent->getQUUID()] = newcomponent;
-    newcomponent->SetOwner(this);
+
+    newcomponent->SetOwner(this); //Needs to run first set OGRID in Component
+    this->DynaMindIDToOGRID[newcomponent->getDynaMindID()] = std::pair<int,int>(newcomponent->getOGRfeatureID(), 1);
 
     return true;
 }
@@ -923,7 +937,10 @@ bool System::ViewCache::Equation::eval(Component* c) const
 
 bool System::ViewCache::add(Component* c)
 {
-    rawElements.insert(c->getQUUID());
+    //rawElements.insert(c->getQUUID());
+
+    rawElementsDM.push_back(c->getDynaMindID());
+    return true;
 
     if(legal(c))
     {
@@ -948,5 +965,16 @@ bool System::ViewCache::remove(Component* c)
 bool System::ViewCache::legal(Component* c)
 {
     return eq.eval(c);
+}
+
+Component *System::ViewCache::getElement(int id)
+{
+    DM::Component * cmp = new DM::Component(rawElementsDM[id], currentSys);
+    return cmp;
+}
+
+long System::ViewCache::getNumberOfElements()
+{
+    return this->rawElementsDM.size();
 }
 

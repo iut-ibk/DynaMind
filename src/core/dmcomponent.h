@@ -85,6 +85,9 @@ public:
     /** @brief Copies a component */
     Component(const Component& s);
 
+    /** @brief Copies a component */
+    Component(QUuid id, DM::System * s);
+
     /** @brief Destructor */
     virtual ~Component();
 
@@ -149,6 +152,12 @@ public:
     /** @brief exports all attributes of this components to the db */
     void _moveAttributesToDb();
 
+    QUuid getDynaMindID() const;
+    void setDynaMindID(const std::string &value);
+
+    long getOGRfeatureID() const;
+    void setOGRfeatureID(long value);
+
 protected:
     /* @brief Sets stateUuid and ownership in sql db*/
     virtual void SetOwner(Component *owner);
@@ -174,7 +183,7 @@ protected:
 
 #ifdef GDAL
     long OGRfeatureID;
-    long DynaMindID;
+    std::string DynaMindID;
 #endif
 
 private:
