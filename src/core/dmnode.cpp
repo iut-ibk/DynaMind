@@ -32,6 +32,7 @@
 
 #include <dmdbconnector.h>
 #include <QSqlQuery>
+#include <dmsystem.h>
 #include "dmlogger.h"
 
 using namespace DM;
@@ -81,7 +82,23 @@ QString Node::getTableName()
 }
 double Node::getX() const
 {
-    return this->x;
+    if (this->OGRfeatureID == -1) {
+        return this->x;
+    }
+    OGRFeature * f = this->currentSys->getNodeLayer()->GetFeature(this->OGRfeatureID);
+    if (f == NULL) {
+        Logger(Error) << "No geometry";
+        return -1;
+    }
+    Logger(Debug) << (int) f->GetGeometryRef()->getGeometryType();
+    if (f->GetGeometryRef()->getGeometryType() != wkbPoint) {
+        Logger(Error) << "Unknown geometry " << f->GetGeometryRef()->getGeometryName();
+        return -1;
+    }
+    OGRPoint *poPoint = (OGRPoint *) f->GetGeometryRef();
+        OGRFeature::DestroyFeature(f);
+    return poPoint->getX();
+
 }
 
 double Node::getY() const
@@ -122,10 +139,20 @@ std::vector<Edge*> Node::getEdges() const
 void Node::set(double x, double y, double z)
 {
     QMutexLocker ml(mutex);
-
-    this->x = x;
-    this->y = y;
-    this->z = z;
+    if (this->OGRfeatureID == -1) {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+        return;
+    }
+    OGRPoint pt;
+    pt.setX(x);
+    pt.setY(y);
+    pt.setZ(z);
+    OGRFeature * f = this->currentSys->getNodeLayer()->GetFeature(this->OGRfeatureID);
+    f->SetGeometry(&pt);
+    this->currentSys->getNodeLayer()->SetFeature(f);
+    OGRFeature::DestroyFeature(f);
 }
 
 void Node::setX(double x)

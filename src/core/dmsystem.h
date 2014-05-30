@@ -33,6 +33,8 @@
 #include <dmview.h>
 #include <dmcomponent.h>
 
+#include <ogrsf_frmts.h>
+
 #ifdef SWIG
 #define DM_HELPER_DLL_EXPORT
 #endif
@@ -70,6 +72,7 @@ class  DM_HELPER_DLL_EXPORT System : public Component
 {
     friend class DerivedSystem;
 public:
+    long id;
     bool removeChild(Component* c);
 
     /*@deprecated*/
@@ -182,9 +185,13 @@ public:
 
     /** @brief imports all components according to the currently applied views (update view) */
     void _importViewElementsFromDB();
+	OGRLayer *getPoint_layer() const;
+	void setPoint_layer(OGRLayer *value);
+
 protected:
-    const Edge* getEdgeReadOnly(Node* start, Node* end);
+	const Edge* getEdgeReadOnly(Node* start, Node* end);
 private:
+
     void SQLInsert();
     void SQLUpdateStates();
     bool addChild(Component *newcomponent);
@@ -199,14 +206,18 @@ private:
     std::set<System*>		subsystems;
     std::set<Component* >	components;
 
+
+
     std::map<QUuid, Component*>	quuidMap;
 
     std::vector<DM::System*> sucessors;
 
     //std::map<std::string, std::vector<Component*> > views;
+public:
     class ViewCache
     {
     public:
+        DM::System * currentSys;
         struct Equation
         {
             Equation()
@@ -230,14 +241,35 @@ private:
         bool remove(Component* c);
         bool legal(Component* c);
 
+        DM::Component * getElement(int id);
+        long getNumberOfElements();
+
         std::set<Component*> filteredElements;
         System* sys;
         std::set<QUuid>	rawElements;
+        std::vector<QUuid> rawElementsDM;
     //private:
         View view;
     };
 	friend class Component;
     std::map<std::string, ViewCache > viewCaches;
+    ViewCache * getViewCache(DM::View & v);
+    long getOGRfeatureIDfromUUID(QUuid id);
+
+#ifdef GDAL
+public:
+	OGRLayer *getComponentLayer() {return this->componentLayer;}
+    OGRLayer *getNodeLayer() {return this->nodeLayer;}
+    void writeToDisk(){OGRDataSource::DestroyDataSource( poDS );}
+private:
+	OGRDataSource		*poDS;
+	OGRSFDriver			*poDrive;
+
+	OGRLayer * componentLayer;
+    OGRLayer * nodeLayer;
+    std::map<QUuid, std::pair<int, int> > DynaMindIDToOGRID; //also contains the IDs in View
+#endif
+
 };
 
 typedef std::map<std::string, DM::System*> SystemMap;

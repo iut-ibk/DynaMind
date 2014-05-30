@@ -1,5 +1,5 @@
 SET(gtest_force_shared_crt "ON" CACHE BOOL "")
-ADD_SUBDIRECTORY(gtest-1.6.0)
+ADD_SUBDIRECTORY(gtest-1.7.0)
 MESSAGE(STATUS "gtest_force_shared_crt = ${gtest_force_shared_crt}")
 
 # sql stuff
@@ -25,8 +25,9 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}
                     ${dynamind_SOURCE_DIR}/src/DMTestModules
                     ${dynamind_SOURCE_DIR}/src/DMToolboxes)
 
-FILE(GLOB UNIT_CPP *.cpp)
-
+#FILE(GLOB UNIT_CPP *.cpp)
+SET (UNIT_CPP
+    testsystem_gdal.cpp)
 
 ADD_EXECUTABLE(unit-test ${UNIT_CPP})
 

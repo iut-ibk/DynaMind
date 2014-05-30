@@ -39,6 +39,7 @@
 #include <QSqlQuery>
 #include <QUuid>
 #include <QRegExp>
+#include "cpl_string.h"
 
 using namespace DM;
 
@@ -49,6 +50,35 @@ System::System() : Component(true)
     DBConnector::getInstance();
     SQLInsert();
     isInserted = true;
+    id = 0;
+
+
+
+#ifdef GDAL
+	OGRRegisterAll();
+    poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "SQLite" );
+    //poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "Memory" );
+    char ** options = NULL;
+    options = CSLSetNameValue( options, "OGR_SQLITE_CACHE", "1024" );
+
+
+    poDS = poDrive->CreateDataSource("/tmp/mem.db",options );
+    //poDS = poDrive->CreateDataSource("mem" );
+    if( poDS == NULL )
+	{
+		DM::Logger(DM::Error) << "couldn't create source";
+	}
+    componentLayer= poDS->CreateLayer("components", NULL, wkbNone, NULL );
+    OGRFieldDefn oField( "dynamind_id", OFTString );
+    componentLayer->CreateField(&oField);
+
+
+    //poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "ESRI Shapefile" );
+    //poDS = poDrive->CreateDataSource( "/tmp/point_out.shp", NULL );
+    nodeLayer = poDS->CreateLayer("nodes", NULL, wkbPoint, NULL );
+    nodeLayer->CreateField(&oField);
+
+#endif
 }
 
 System::System(const System& s) : Component(s, true)
@@ -81,12 +111,35 @@ QString System::getTableName()
 {
     return "systems";
 }
+
+System::ViewCache *System::getViewCache(View &v)
+{
+    ViewCache * vc = &viewCaches[v.getName()];
+    vc->currentSys = this;
+    return  vc;
+}
+
+long System::getOGRfeatureIDfromUUID(QUuid id)
+{
+    std::pair<int,int> p = this->DynaMindIDToOGRID[id];
+    return p.first;
+}
+OGRLayer *System::getPoint_layer() const
+{
+    return nodeLayer;
+}
+
+void System::setPoint_layer(OGRLayer *value)
+{
+    nodeLayer = value;
+}
+
 Component * System::addComponent(Component* c, const DM::View & view)
 {
-    QMutexLocker ml(mutex);
+	QMutexLocker ml(mutex);
 
-    if(!addChild(c)) {
-        delete c;
+	if(!addChild(c)) {
+		delete c;
         return 0;
     }
 
@@ -111,7 +164,7 @@ Node* System::addNode(Node* node)
         delete node;
         return 0;
     }
-    nodes.insert(node);
+    //nodes.insert(node);
 
     return node;
 }
@@ -301,7 +354,6 @@ std::vector<Component*> System::getAllComponentsInView(const DM::View & view)
         const ViewCache &vc = viewCaches[view.getName()];
         foreach(Component* c, vc.filteredElements)
             comps.push_back(c);
-
     }
 
     return comps;
@@ -353,8 +405,10 @@ bool System::addChild(Component *newcomponent)
     if(!newcomponent)
         return false;
 
-    quuidMap[newcomponent->getQUUID()] = newcomponent;
-    newcomponent->SetOwner(this);
+    //quuidMap[newcomponent->getQUUID()] = newcomponent;
+
+    newcomponent->SetOwner(this); //Needs to run first set OGRID in Component
+    this->DynaMindIDToOGRID[newcomponent->getDynaMindID()] = std::pair<int,int>(newcomponent->getOGRfeatureID(), 1);
 
     return true;
 }
@@ -883,7 +937,10 @@ bool System::ViewCache::Equation::eval(Component* c) const
 
 bool System::ViewCache::add(Component* c)
 {
-    rawElements.insert(c->getQUUID());
+    //rawElements.insert(c->getQUUID());
+
+    rawElementsDM.push_back(c->getDynaMindID());
+    return true;
 
     if(legal(c))
     {
@@ -908,5 +965,16 @@ bool System::ViewCache::remove(Component* c)
 bool System::ViewCache::legal(Component* c)
 {
     return eq.eval(c);
+}
+
+Component *System::ViewCache::getElement(int id)
+{
+    DM::Component * cmp = new DM::Component(rawElementsDM[id], currentSys);
+    return cmp;
+}
+
+long System::ViewCache::getNumberOfElements()
+{
+    return this->rawElementsDM.size();
 }
 

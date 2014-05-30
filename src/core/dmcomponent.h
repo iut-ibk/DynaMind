@@ -38,9 +38,13 @@
 #include <QMutex>
 #include <QMutexLocker>
 
+#include <ogrsf_frmts.h>
+
 #ifdef SWIG
 #define DM_HELPER_DLL_EXPORT
 #endif
+
+#define GDAL;
 
 namespace DM {
 
@@ -76,10 +80,13 @@ public:
     Component& operator=(Component const& other);
 
     /** @brief The default constructor creates a UUID for the component */
-    Component();
+	Component();
 
     /** @brief Copies a component */
     Component(const Component& s);
+
+    /** @brief Copies a component */
+    Component(QUuid id, DM::System * s);
 
     /** @brief Destructor */
     virtual ~Component();
@@ -145,6 +152,12 @@ public:
     /** @brief exports all attributes of this components to the db */
     void _moveAttributesToDb();
 
+    QUuid getDynaMindID() const;
+    void setDynaMindID(const std::string &value);
+
+    long getOGRfeatureID() const;
+    void setOGRfeatureID(long value);
+
 protected:
     /* @brief Sets stateUuid and ownership in sql db*/
     virtual void SetOwner(Component *owner);
@@ -166,11 +179,23 @@ protected:
     System* currentSys;
     bool	isInserted;
     std::vector<Attribute*> ownedattributes;
+
+
+#ifdef GDAL
+    long OGRfeatureID;
+    std::string DynaMindID;
+#endif
+
 private:
 
     Attribute* getExistingAttribute(const std::string& name) const;
     bool addAttribute(Attribute *pAttribute);
     void CopyFrom(const Component &c, bool successor = false);
+
+#ifdef GDAL
+        void initFeature();
+#endif
+
 };
 }
 #endif // COMPONENT_H

@@ -43,16 +43,25 @@
 
 using namespace DM;
 
+
+
 Component::Component()
 {
+//#ifndef GDAL
     DBConnector::getInstance();
     uuid = QUuid::createUuid();
 
     currentSys = NULL;
     isInserted = false;
     mutex = new QMutex(QMutex::Recursive);
+//#endif
+
 
     DBConnector::getInstance();
+#ifdef GDAL
+    OGRfeatureID = -1;
+    DynaMindID = "";
+#endif
 }
 
 Component::Component(bool b)
@@ -63,6 +72,11 @@ Component::Component(bool b)
     currentSys = NULL;
     isInserted = false;
     mutex = new QMutex(QMutex::Recursive);
+
+#ifdef GDAL
+    OGRfeatureID = -1;
+    DynaMindID = "";
+#endif
 }
 
 void Component::CopyFrom(const Component &c, bool successor)
@@ -79,14 +93,62 @@ void Component::CopyFrom(const Component &c, bool successor)
         }
     }
     else
-        ownedattributes = c.ownedattributes;
+		ownedattributes = c.ownedattributes;
 }
+
+#ifdef GDAL
+void Component::initFeature()
+{
+	QMutexLocker ml(mutex);
+    if (this->OGRfeatureID !=  -1)
+		return;
+	if (this->currentSys == NULL)
+		return;
+    OGRFeature * ogrFeature = NULL;
+
+    if (this->DynaMindID.empty()) {
+        this->DynaMindID = this->uuid.createUuid().toString().toStdString().c_str();
+    }
+    switch (getType()) {
+        case COMPONENT:
+            ogrFeature = OGRFeature::CreateFeature(this->currentSys->getComponentLayer()->GetLayerDefn());
+            ogrFeature->SetField(0,  this->DynaMindID.c_str());
+            if( this->currentSys->getComponentLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
+                Logger(Error) << "Error while creating Component";
+            }
+            break;
+        case NODE:
+            ogrFeature = OGRFeature::CreateFeature(this->currentSys->getNodeLayer()->GetLayerDefn());
+            ogrFeature->SetField(0,  this->DynaMindID.c_str());
+            if( this->currentSys->getNodeLayer()->CreateFeature(ogrFeature)!= OGRERR_NONE ) {
+                Logger(Error) << "Error while creating Node";
+            }
+            break;
+    }
+
+    OGRfeatureID = ogrFeature->GetFID();
+    OGRFeature::DestroyFeature( ogrFeature );
+}
+#endif
 
 Component::Component(const Component& c)
 {
     currentSys = NULL;
     CopyFrom(c);
     mutex = new QMutex(QMutex::Recursive);
+#ifdef GDAL
+    OGRfeatureID = -1;
+    DynaMindID = "";
+#endif
+}
+
+Component::Component(QUuid id, System *s)
+{
+    currentSys = s;
+    mutex = new QMutex(QMutex::Recursive);
+    DynaMindID = id.toString().toStdString();
+    OGRfeatureID = currentSys->getOGRfeatureIDfromUUID(id);
+
 }
 
 Component::Component(const Component& c, bool bInherited)
@@ -94,6 +156,10 @@ Component::Component(const Component& c, bool bInherited)
     currentSys = NULL;
     CopyFrom(c);
     mutex = new QMutex(QMutex::Recursive);
+#ifdef GDAL
+    OGRfeatureID = -1;
+    DynaMindID = "";
+#endif
 }
 
 Component::~Component()
@@ -105,9 +171,14 @@ Component::~Component()
 
     ownedattributes.clear();
     // if this class is not of type component, nothing will happen
-    SQLDelete();
+//#ifndef GDAL
+    //SQLDelete();
+
+
     mutex->unlock();
+
     delete mutex;
+
 }
 
 Component& Component::operator=(const Component& other)
@@ -132,8 +203,6 @@ std::string Component::getUUID()
 
         name = QUuid::createUuid().toString().toStdString();
         a->setString(name);
-        //if(this->currentSys && currentSys != this)	// avoid self referencing
-        //	currentSys->componentNameMap[name] = this;
     }
     return name;
 }
@@ -150,18 +219,48 @@ QString Component::getTableName()
 {
     return "components";
 }
+long Component::getOGRfeatureID() const
+{
+    return OGRfeatureID;
+}
+
+void Component::setOGRfeatureID(long value)
+{
+    OGRfeatureID = value;
+}
+
+QUuid Component::getDynaMindID() const
+{
+    return QUuid(QString::fromStdString(this->DynaMindID));
+}
+
+void Component::setDynaMindID(const std::string &value)
+{
+    DynaMindID = value;
+}
+
 
 bool Component::addAttribute(const std::string& name, double val)
 {
+    //#ifndef GDAL
     QMutexLocker ml(mutex);
+    if (this->OGRfeatureID == -1) {
+        if (Attribute* a = getExistingAttribute(name))
+        {
+            a->setDouble(val);
+            return true;
+        }
 
-    if (Attribute* a = getExistingAttribute(name))
-    {
-        a->setDouble(val);
-        return true;
+        return this->addAttribute(new Attribute(name, val));
+    } else {
+#ifdef GDAL
+    OGRFeature * f = this->currentSys->getComponentLayer()->GetFeature(this->OGRfeatureID);
+    f->SetField(name.c_str(), val);
+    this->currentSys->getComponentLayer()->SetFeature(f);
+    OGRFeature::DestroyFeature(f);
+    return true;
+#endif
     }
-
-    return this->addAttribute(new Attribute(name, val));
 }
 
 bool Component::addAttribute(const std::string& name, const std::string& val)
@@ -267,49 +366,46 @@ Attribute* Component::getAttribute(const std::string& name)
 
     QMutexLocker ml(mutex);
 
-    std::vector<Attribute*>::iterator it;
-    for (it = ownedattributes.begin(); it != ownedattributes.end(); ++it)
-        if ((*it)->getName() == name)
-            break;
+    if (this->OGRfeatureID == -1) {
+        //#ifndef GDAL
+        std::vector<Attribute*>::iterator it;
+        for (it = ownedattributes.begin(); it != ownedattributes.end(); ++it)
+            if ((*it)->getName() == name)
+                break;
 
-    if (it == ownedattributes.end())
-	{
-		/*
-		Attribute::AttributeType type = Attribute::NOTYPE;
-		// get type
-		if (this->currentSys)
-		{
-			mforeach(const System::ViewCache& vc, this->currentSys->viewCaches)
-			{
-				if (vc.view.hasAttribute(name))
-				{
-					Logger(Warning) << "extracting type of attribute '" << name
-									<< "' from view '" << vc.view.getName() << "'";
-					type = vc.view.getAttributeType(name);
-					break;
-				}
-			}
-		}
-		*/
+        if (it == ownedattributes.end())
+        {
+            // create new attribute with default type: DOUBLE
+            Attribute* a = new Attribute(name, Attribute::DOUBLE);
+            a->setOwner(this);
+            ownedattributes.push_back(a);
 
-		// create new attribute with default type: DOUBLE
-		Attribute* a = new Attribute(name, Attribute::DOUBLE);
-		a->setOwner(this);
-		ownedattributes.push_back(a);
+            return a;
+        }
 
-        return a;
-    }
-    else if((*it)->GetOwner() != this)
-	{
-        // successor copy
-        Attribute* a = new Attribute(**it);
-        ownedattributes.erase(it);
-        ownedattributes.push_back(a);
-        a->setOwner(this);
-        return a;
+        else if((*it)->GetOwner() != this)
+        {
+            // successor copy
+            Attribute* a = new Attribute(**it);
+            ownedattributes.erase(it);
+            ownedattributes.push_back(a);
+            a->setOwner(this);
+            return a;
+        }
+
+        return *it;
     }
 
-    return *it;
+#ifdef GDAL
+    OGRFeature * f = this->currentSys->getComponentLayer()->GetFeature(this->OGRfeatureID);
+    if (f == 0) {
+        f = this->currentSys->getNodeLayer()->GetFeature(this->OGRfeatureID);
+    }
+    DM::Attribute * attr = new DM::Attribute(name, Attribute::STRING);
+    attr->setString(f->GetFieldAsString(name.c_str()));
+    OGRFeature::DestroyFeature(f);
+    return attr;
+#endif
 }
 
 const std::vector<Attribute*>& Component::getAllAttributes()
@@ -342,6 +438,9 @@ void Component::SetOwner(Component *owner)
     QMutexLocker ml(mutex);
 
     currentSys = owner->getCurrentSystem();
+#ifdef GDAL
+	this->initFeature();
+#endif
 }
 
 void Component::_moveToDb()
@@ -374,7 +473,7 @@ void Component::_moveAttributesToDb()
 
 void Component::SQLDelete()
 {
-    QMutexLocker ml(mutex);
+	QMutexLocker ml(mutex);
 
     if(isInserted)
     {
@@ -400,3 +499,4 @@ Attribute* Component::getExistingAttribute(const std::string& name) const
 
     return NULL;
 }
+
