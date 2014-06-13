@@ -247,10 +247,13 @@ class NodeFactory(INodeFactory):
         return self.klass().__disown__()
 
     def getNodeName(self):
-        return self.klass.__name__
+        return self.klass().getClassName()
 
     def getFileName(self):
-        return self.klass.__module__.split(".")[0]
+        if(self.klass().getFileName() == ""):
+            return self.klass.__module__.split(".")[0]
+        else:
+            return self.klass().getFileName()
 
 def registerNodes(registry):
     for klass in Module.__subclasses__():
