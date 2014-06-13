@@ -479,4 +479,12 @@ protected:
     const char *nodename::filename = #module; \
     const char *nodename::getFileName()  { return nodename::filename; }
 
+
+#define  DM_DECLARE_CUSTOM_NODE_NAME(nodename,customename, module) \
+    const char *nodename::classname = customename; \
+    const char *nodename::getClassName()  { return nodename::classname; } \
+    const char *nodename::filename = module; \
+    const char *nodename::getFileName()  { return nodename::filename; }
+
+
 #endif // MODULE_H
