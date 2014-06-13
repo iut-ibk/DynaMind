@@ -170,7 +170,12 @@ namespace DM {
 
 #define  DM_DECLARE_GROUP_NAME(nodename, module) \
             const char *nodename::classname = #nodename; \
-                                              const char *nodename::getClassName()  { return nodename::classname; } \
-                                              const char *nodename::filename = #module; \
-                                                                               const char *nodename::getFileName()  { return nodename::filename; }
+            const char *nodename::getClassName()  { return nodename::classname; } \
+            const char *nodename::filename = #module; \
+            const char *nodename::getFileName()  { return nodename::filename; }
+#define  DM_DECLARE_CUSTOM_GROUP_NAME(nodename,customname, module) \
+            const char *nodename::classname = customname; \
+            const char *nodename::getClassName()  { return nodename::classname; } \
+            const char *nodename::filename = module; \
+            const char *nodename::getFileName()  { return nodename::filename; }
 #endif // GROUP_H
