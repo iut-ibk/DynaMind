@@ -271,7 +271,7 @@ bool Module::checkIfAllSystemsAreSet() {
 
         std::string name = it->first;
         if (this->data_vals[name] == 0) {
-            Logger(Error) << name << " " << "Not Set for module " << this->getUuid() << " " << this->getName();
+            //Logger(Error) << name << " " << "Not Set for module " << this->getUuid() << " " << this->getName();
             this->simulation->setSimulationStatus(SIM_ERROR_SYSTEM_NOT_SET);
             return false;
         }
