@@ -49,12 +49,15 @@ GDALSystem::GDALSystem(int EPSG)
 	char ** options = NULL;
 	options = CSLSetNameValue( options, "OGR_SQLITE_CACHE", "1024" );
 	options = CSLSetNameValue( options, "SPATIALITE", "YES" );
+	options = CSLSetNameValue( options, "OGR_SQLITE_SYNCHRONOUS", "OFF" );
 
 	DBID = QUuid::createUuid().toString();
 
 	QString dbname =  "/tmp/" + DBID + ".db";
 
+	dbname =  "file:"+DBID+"?mode=memory&cache=shared";// + DBID;// + ".db";
 	poDS = poDrive->CreateDataSource(dbname.toStdString().c_str() , options );
+
 
 	if( poDS == NULL ) {
 		DM::Logger(DM::Error) << "couldn't create source";
@@ -73,7 +76,7 @@ GDALSystem::GDALSystem(const GDALSystem &s)
 {
 	DM::Logger(DM::Warning) << "Split System";
 	//Copy all that is needed
-	poDrive = s.poDrive;
+	poDrive = OGRSFDriverRegistrar::GetRegistrar()->GetDriverByName( "SQLite" );//s.poDrive;
 	viewLayer = s.viewLayer;
 	state_ids = s.state_ids;
 	state_ids = s.state_ids;
@@ -86,18 +89,66 @@ GDALSystem::GDALSystem(const GDALSystem &s)
 	//Copy DB
 	QString origin =  "/tmp/" + s.DBID + ".db";
 	QString dest = "/tmp/" + DBID + ".db";
-	QFile::copy(origin, dest);
+
+	origin =   "file:"+s.DBID+"?mode=memory&cache=shared";// + s.DBID ;
+	dest = "file:"+DBID+"?mode=memory&cache=shared";// + DBID;
+	//QFile::copy(origin, dest);
 
 	//Connect to DB
 	char ** options = NULL;
 	options = CSLSetNameValue( options, "OGR_SQLITE_CACHE", "1024" );
 	options = CSLSetNameValue( options, "SPATIALITE", "YES" );
+	options = CSLSetNameValue( options, "OGR_SQLITE_SYNCHRONOUS", "OFF" );
 
-	poDS = poDrive->Open(dest.toStdString().c_str(), true);
+	//poDS = poDrive->Open(dest.toStdString().c_str(), true);
+	poDS = poDrive->CreateDataSource(dest.toStdString().c_str() , options );
+	if( poDS == NULL ) {
+		DM::Logger(DM::Error) << "couldn't create source";
+		return;
+	}
 
 	//Create new state
 	state_ids.push_back(QUuid::createUuid().toString().toStdString());
 
+	OGRSpatialReference* oSourceSRS;
+	oSourceSRS = new OGRSpatialReference();
+	oSourceSRS->importFromEPSG(this->EPSG);
+
+	for (std::map<std::string, OGRLayer *>::const_iterator it = viewLayer.begin();
+		 it != viewLayer.end(); ++it) {
+		std::string name = it->first;
+		OGRLayer * lyr_origin = it->second;
+		OGRFeatureDefn * def =  (OGRFeatureDefn*)lyr_origin->GetLayerDefn();
+
+		OGRLayer * lyr = poDS->CreateLayer(name.c_str(), oSourceSRS, def->GetGeomType(), NULL );
+
+		int c_fields = def->GetFieldCount();
+		for (int i = 0; i < c_fields; i++) {
+			lyr->CreateField(def->GetFieldDefn(i));
+		}
+
+		OGRFeature * feat;
+		lyr_origin->ResetReading();
+		lyr->StartTransaction();
+		int counter = 0;
+		while (feat = lyr_origin->GetNextFeature()) {
+			counter++;
+			if (counter % 1000000 == 0){
+				lyr->CommitTransaction();
+				lyr->StartTransaction();
+			}
+			OGRFeature * f_new = OGRFeature::CreateFeature( lyr->GetLayerDefn() );
+			for (int i = 0; i < c_fields; i++)
+				f_new->SetField(i, feat->GetRawFieldRef(i));
+			if (def->GetGeomType() != wkbNone) {
+				OGRGeometry * geo = feat->GetGeometryRef();
+				f_new->SetGeometry(geo);
+			}
+			lyr->CreateFeature(f_new);
+			OGRFeature::DestroyFeature(f_new);
+		}
+		lyr->CommitTransaction();
+	}
 	//RebuildViewLayer
 	for (std::map<std::string, OGRLayer *>::const_iterator it = viewLayer.begin();
 		 it != viewLayer.end(); ++it) {
@@ -246,7 +297,7 @@ OGRLayer *GDALSystem::createLayer(const View &v)
 	OGRSpatialReference* oSourceSRS;
 	oSourceSRS = new OGRSpatialReference();
 	oSourceSRS->importFromEPSG(this->EPSG);
-//	oSourceSRS = NULL;
+	//	oSourceSRS = NULL;
 
 	switch ( v.getType() ) {
 	case DM::COMPONENT:

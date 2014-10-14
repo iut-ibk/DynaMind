@@ -290,7 +290,8 @@ class DM::ViewContainer {
 		if self.__ogr_layer != None:
 			return
 		db_id = self.getDBID()
-		self.__ds = ogr.Open("/tmp/"+db_id+".db")
+		#self.__ds = ogr.Open("/tmp/"+db_id+".db")
+		self.__ds = ogr.Open("file:"+db_id+"?mode=memory&cache=shared")
 		table_name = str(self.getName())
 		self.__ogr_layer = self.__ds.GetLayerByName(table_name)
 
