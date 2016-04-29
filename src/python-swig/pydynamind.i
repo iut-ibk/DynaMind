@@ -143,7 +143,7 @@ public:
 
     virtual std::string getHelpUrl();
 
-
+    virtual QString getWorkPath();
     virtual const char *getClassName();
 
     virtual const char *getFileName();
