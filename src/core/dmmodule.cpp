@@ -34,6 +34,8 @@
 #include <QStringList>
 #include <typeinfo>
 #include <dmport.h>
+#include <QApplication>
+#include <QDir>
 
 #include <QUuid>
 #include <sstream>
@@ -701,6 +703,11 @@ DM::System*   Module::getSystem_Write(std::string name, std::vector<DM::View> vi
     return sys;
 }
 
+QString Module::getWorkPath()
+{
+    return QDir::tempPath()+"/P8Tool/"+QString::number(QApplication::applicationPid());
+}
+
 
 void Module::setID(const int id) {
     this->id = id;
@@ -768,6 +775,8 @@ void Module::setExecuted(bool ex){
 
 
 std::string Module::getHelpUrl() {
+    return QString(QDir::tempPath()+"/P8Tool/"+QString::number(QApplication::applicationPid())).toStdString();
+
     return "";
 }
 

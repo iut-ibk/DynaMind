@@ -195,7 +195,7 @@ public:
     /** @brief Creates a new system and adds the corresponding views */
     virtual  DM::System* getSystem_Write(string name, std::vector<View> view);
 
-
+    virtual QString getWorkPath();
     virtual int getID() const;
     void setID(const int id);
 
